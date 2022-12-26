@@ -1,0 +1,6 @@
+# ninja log v5
+0	1555	6937930159231336	CMakeFiles/transport_catalogue.dir/main.cpp.obj	800180342fa0b621
+20	1562	6937930159301700	CMakeFiles/transport_catalogue.dir/stat_reader.cpp.obj	4b61c2bd22fdc7bd
+10	2094	6937930164572881	CMakeFiles/transport_catalogue.dir/input_reader.cpp.obj	6502c59a06ce2ee
+30	2182	6937930165473108	CMakeFiles/transport_catalogue.dir/transport_catalogue.cpp.obj	d48bc52296b932e2
+2182	2946	6937930173110851	transport_catalogue.exe	3d5baad1b06de22
