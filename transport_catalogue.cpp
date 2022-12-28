@@ -8,40 +8,35 @@
 namespace transport_catalogue{
 
 
-const Stop& TransportCatalogue::AddStop(std::string& name, Coordinates coords) {
-    if (stops_index_.count(name) > 0) return *stops_index_.at(name);
+bool TransportCatalogue::AddStop(const std::string& name, const Coordinates coords) {
+    const Stop stop {name, coords};
 
-    const Stop* ptr = &stops_.emplace_back(Stop{std::move(name), coords});
-
-    std::string_view stop_name (ptr->stop_name); // string_view must point to permanent string, that will not disappear.
-    auto [iter, ok] = stops_index_.emplace(stop_name, ptr);
-
-    return *iter->second;
+    return AddStop(stop);
 }
 
-const Stop& TransportCatalogue::AddStop(Stop& stop) {
-    if (stops_index_.count(stop.stop_name) > 0) return *stops_index_.at(stop.stop_name);
+bool TransportCatalogue::AddStop(const Stop& stop) {
+    if (stops_index_.count(stop.stop_name) > 0) return false;
 
-    const Stop* ptr = &stops_.emplace_back(std::move(stop));
+    const Stop* ptr = &stops_.emplace_back(stop);
 
     std::string_view stop_name (ptr->stop_name); // string_view must point to permanent string, that will not disappear.
     auto [result, ok] = stops_index_.emplace(stop_name, ptr);
 
-    return *result->second;
+    return true;
 }
 
-std::pair<bool, const Stop&> TransportCatalogue::FindStop(std::string_view name) {
+std::pair<bool, const Stop&> TransportCatalogue::FindStop(const std::string_view name) const {
     const auto iter = stops_index_.find(name);
     if (iter == stops_index_.end()) return {false, EMPTY_STOP};
 
     return {true, *iter->second};
 }
 
-const BusRoute& TransportCatalogue::AddBus(BusRoute &bus_route) {
+bool TransportCatalogue::AddBus(const BusRoute &bus_route) {
     const auto iter = routes_index_.find(bus_route.bus_name);
-    if (iter != routes_index_.end()) return *iter->second;
+    if (iter != routes_index_.end()) return false;
 
-    const BusRoute* ptr = &bus_routes_.emplace_back(std::move(bus_route));
+    const BusRoute* ptr = &bus_routes_.emplace_back(bus_route);
 
     std::string_view bus_name (ptr->bus_name);
     auto [result, ok] = routes_index_.emplace(bus_name, ptr);
@@ -50,7 +45,7 @@ const BusRoute& TransportCatalogue::AddBus(BusRoute &bus_route) {
         stop_and_buses_[stop->stop_name].insert(bus_name);
     }
 
-    return *result->second;
+    return true;
 }
 
 const BusRoute& TransportCatalogue::FindBus(std::string_view name) {
@@ -113,7 +108,7 @@ const std::set<std::string_view>& TransportCatalogue::GetBusesForStop(std::strin
     return iter->second;
 }
 
-bool TransportCatalogue::SetDistanceBetweenStops(const std::string_view& stop, const std::string_view& other_stop, int dist) {
+bool TransportCatalogue::SetDistanceBetweenStops(const std::string_view stop, const std::string_view other_stop, int dist) {
     auto iter_stop = stops_index_.find(stop);
     auto iter_other = stops_index_.find(other_stop);
     if (iter_stop == stops_index_.end() || iter_other == stops_index_.end()) return false; // one of stops is not present in the catalogue
@@ -138,7 +133,7 @@ bool TransportCatalogue::SetDistanceBetweenStops(const std::string_view& stop, c
     return true;
 }
 
-int TransportCatalogue::GetDistanceBetweenStops(const std::string_view &stop, const std::string_view &other_stop) {
+int TransportCatalogue::GetDistanceBetweenStops(const std::string_view stop, const std::string_view other_stop) {
     const auto iter_stop = stops_index_.find(stop);
     const auto iter_other = stops_index_.find(other_stop);
     if (iter_stop == stops_index_.end() || iter_other == stops_index_.end()) return -1;
@@ -151,18 +146,6 @@ int TransportCatalogue::GetDistanceBetweenStops(const std::string_view &stop, co
     if (iter_dist == stops_distance_index_.end()) return -1;
 
     return iter_dist->second;
-}
-
-
-std::ostream& operator<<(std::ostream& os, const BusInfo& bi) {
-    using namespace std::literals;
-    double length = bi.route_length;
-
-    os  << "Bus "s << bi.bus_name << ": "s << bi.stops_number << " stops on route, "s
-        << bi.unique_stops << " unique stops, "s << std::setprecision(6) << length << " route length, "s
-        << std::setprecision(6) << bi.curvature << " curvature"s << std::endl;
-
-    return os;
 }
 
 

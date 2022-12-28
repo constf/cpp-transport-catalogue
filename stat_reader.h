@@ -19,14 +19,14 @@ public:
     size_t ReadInputQueries(std::istream& input);
     size_t ReadInputQueries(std::vector<std::string>& raw_strings);
 
-    size_t ParseRawIntoQueries(std::vector<Query>& output);
+    [[nodiscard]] const std::vector<Query>& GetQueries() const;
 
 private:
-    std::vector<std::pair<ObjectType, std::string>> raw_input_;
+    std::vector<Query> raw_input_;
 };
 
 
-size_t ReadInputAndQueryTransportCatalogue(std::istream& input_stream, TransportCatalogue& tc);
+size_t ReadInputAndQueryTransportCatalogue(std::istream& input_stream, std::ostream& output_stream,TransportCatalogue& tc);
 
 
 } // namespace transport_catalogue

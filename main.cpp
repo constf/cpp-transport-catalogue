@@ -7,10 +7,10 @@ using namespace transport_catalogue;
 
 
 int main() {
-    TransportCatalogue cat01;
+    TransportCatalogue catalogue01;
 
-    LoadStreamToTransportCatalogue(std::cin, cat01);
-    ReadInputAndQueryTransportCatalogue(std::cin, cat01);
+    LoadStreamToTransportCatalogue(std::cin, catalogue01);
+    ReadInputAndQueryTransportCatalogue(std::cin, std::cout, catalogue01);
 
     return 0;
 }

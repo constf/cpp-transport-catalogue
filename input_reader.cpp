@@ -52,6 +52,9 @@ size_t RawTransportData::ConvertRawDataToStops(std::vector<Stop> &stops_to_fill)
 
         // single out the stop's name
         size_t last = line.find_first_of(":"s); // found the colon separator
+        //
+        // извините, не очень понял, что именно нужно сделать.
+        //
         if (last < 1 || last == -1) continue;
         last = line.find_last_not_of(' ', last - 1); // check if there are some spaces before colon, skip them
         if (last == -1) continue;
