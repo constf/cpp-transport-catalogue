@@ -23,7 +23,7 @@ const Stop EMPTY_STOP{};
 enum RouteType{
     NOT_SET,
     CIRCLE_ROUTE,
-    WAY_AND_BACK_ROUTE
+    RETURN_ROUTE
 };
 
 struct BusRoute{

@@ -148,7 +148,7 @@ size_t RawTransportData::ParseRawDataToBusAndStopsStrings(std::vector<BusAndStop
         for (first = line.find_first_not_of(": ", last); first < SIZE && last < SIZE;) {
             last = line.find_first_of(">-", first); // found the separator between stops
             if (last < SIZE && type == RouteType::NOT_SET) {
-                type = line[last] == '>' ? RouteType::CIRCLE_ROUTE : RouteType::WAY_AND_BACK_ROUTE;
+                type = line[last] == '>' ? RouteType::CIRCLE_ROUTE : RouteType::RETURN_ROUTE;
             }
             last = line.find_last_not_of(' ', last - 1); // check if there are some spaces before separator, skip them
             bus_stops.push_back(line.substr(first, ++last - first));

@@ -79,13 +79,13 @@ BusInfo TransportCatalogue::GetBusInfo(std::string_view bus_name) {
         // compute the road length
         length_meters += GetDistanceBetweenStops((**first).stop_name, (**second).stop_name);
         // if it is a way and back route, add the back distance, which may be different from direct distance
-        if (route.type == RouteType::WAY_AND_BACK_ROUTE) {
+        if (route.type == RouteType::RETURN_ROUTE) {
             length_meters += GetDistanceBetweenStops((**second).stop_name, (**first).stop_name);
         }
     }
 
     result.stops_number = route.route_stops.size();
-    if (route.type == RouteType::WAY_AND_BACK_ROUTE){
+    if (route.type == RouteType::RETURN_ROUTE){
         result.stops_number *= 2;
         result.stops_number -= 1;
         length_geo *= 2;
