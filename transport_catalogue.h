@@ -69,8 +69,8 @@ private:
 class TransportCatalogue {
 public:
     TransportCatalogue() = default;
-    bool AddStop(const std::string& name, const Coordinates coords);
-    bool AddStop(const Stop& stop);
+    void AddStop(const std::string& name, const Coordinates coords);
+    void AddStop(const Stop& stop);
     std::pair<bool, const Stop&> FindStop(const std::string_view name) const;
     // По поводу optional: optional не позволяет использовать reference класс. Вот выдержка из класса optional, последняя строка в комментарии
     // nullptr не передать, т.к. это ссылка, а не указатаель.
@@ -97,10 +97,10 @@ public:
 
     bool AddBus(const BusRoute& bus_route);
     const BusRoute& FindBus(std::string_view name);
-    BusInfo GetBusInfo(std::string_view bus_name);
-    const std::set<std::string_view>& GetBusesForStop(std::string_view stop);
-    bool SetDistanceBetweenStops(const std::string_view stop, const std::string_view other_stop, int dist);
-    int GetDistanceBetweenStops(const std::string_view stop, const std::string_view other_stop);
+    BusInfo GetBusInfo(std::string_view bus_name) const;
+    const std::set<std::string_view>& GetBusesForStop(std::string_view stop) const;
+    bool SetDistanceBetweenStops(std::string_view stop, std::string_view other_stop, int dist);
+    int GetDistanceBetweenStops(std::string_view stop, std::string_view other_stop) const;
 
 private:
     std::deque<Stop> stops_;

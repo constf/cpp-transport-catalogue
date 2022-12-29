@@ -23,88 +23,111 @@ std::ostream& operator<<(std::ostream& os, const BusInfo& bi) {
 
 
 
-size_t StatisticReaderAndOutput::ReadInputQueries(std::istream &input) {
+size_t StatisticReaderAndOutput::ReadInput_Query_AndPrint(std::istream& input, std::ostream& output_stream) {
     const size_t number_of_queries = ReadLineWithNumber( input );
-    std::vector<std::string> raw_lines( number_of_queries );
 
     for (size_t i = 0; i < number_of_queries; ++i) {
-        raw_lines[i] = ReadLine( input );
-    }
-
-    return ReadInputQueries(raw_lines);
-}
-
-
-size_t StatisticReaderAndOutput::ReadInputQueries(std::vector<std::string> &raw_strings) {
-    const size_t number_of_lines = raw_strings.size();
-    raw_input_.reserve(number_of_lines);
-
-    for (const std::string& line : raw_strings) {
-        auto [type, first] = CheckTypeAndFindStart(line);
-        size_t last = line.find_last_not_of(' ');
-        if (last > line.size()) continue;
+        // read raw line from input stream
+        std::string raw_line = ReadLine(input );
+        auto [type, first] = CheckTypeAndFindStart(raw_line);
+        // make sure it is not empty or all blanks
+        size_t last = raw_line.find_last_not_of(' ');
+        if (last > raw_line.size()) continue;
+        // single out the query body
+        //std::string query_body = raw_line.substr(first, ++last - first);
+        std::string_view query_body { raw_line.data() + first, ++last - first };
 
         if (type == ObjectType::BUS) {
-            raw_input_.emplace_back(Query {ObjectType::BUS, line.substr(first, ++last - first)});
+            BusQueryAndPrint(query_body, output_stream);
         } else if (type == ObjectType::STOP) {
-            raw_input_.emplace_back(Query {ObjectType::STOP, line.substr(first, ++last - first)});
+            StopQueryAndPrint(query_body, output_stream);
         } else {
             using namespace std::literals;
-            std::cerr << "ReadInputQueries method: _ERROR while processing "s + line + " raw data."s << std::endl;
-            raw_input_.emplace_back(Query {ObjectType::_ERROR, line});
+            std::cerr << "ReadInput_Query_AndPrint method: _ERROR while processing "s + raw_line + " raw data."s << std::endl;
         }
     }
 
-    return number_of_lines;
+    return number_of_queries;
 }
 
 
-const std::vector<Query>& StatisticReaderAndOutput::GetQueries() const{
-    return raw_input_;
+void StatisticReaderAndOutput::BusQueryAndPrint(std::string_view query_body, std::ostream& out) {
+    using namespace std::literals;
+    BusInfo bi = transport_catalogue_.GetBusInfo(query_body);
+
+    if (bi.type == RouteType::NOT_SET) {
+        out << "Bus "s << query_body << ": not found"s << std::endl;
+        return;
+    }
+
+    out << bi;
+}
+
+void StatisticReaderAndOutput::StopQueryAndPrint(std::string_view query_body, std::ostream &out) {
+    using namespace std::literals;
+
+    if ( ! transport_catalogue_.FindStop(query_body).first ) {
+        out << "Stop "s << query_body << ": not found"s << std::endl;
+        return;
+    }
+    const std::set<std::string_view>& bus_routes = transport_catalogue_.GetBusesForStop(query_body);
+    if (bus_routes.empty()) {
+        out << "Stop "s << query_body << ": no buses"s << std::endl;
+        return;
+    }
+    out << "Stop "s << query_body << ": buses "s;
+    for (auto iter = bus_routes.begin(); iter != bus_routes.end(); ++iter) {
+        out << *iter;
+        if (std::next(iter) != bus_routes.end()) {
+            out << ' ';
+        }
+    }
+    out << std::endl;
 }
 
 
 size_t ReadInputAndQueryTransportCatalogue(std::istream& input_stream, std::ostream& output_stream, TransportCatalogue& tc) {
-    StatisticReaderAndOutput stat_reader;
-    stat_reader.ReadInputQueries(input_stream);
+    StatisticReaderAndOutput stat_reader(tc);
 
-    const std::vector<Query>& queries = stat_reader.GetQueries();
+    size_t num_queries = stat_reader.ReadInput_Query_AndPrint(input_stream, output_stream);
 
-    for (const auto& q : queries) {
-        using namespace std::literals;
-        if (q.query_type == ObjectType::BUS){
-            BusInfo bi = tc.GetBusInfo(q.query_body);
+//    const std::vector<Query>& queries = stat_reader.GetQueries();
+//
+//    for (const auto& q : queries) {
+//        using namespace std::literals;
+//        if (q.query_type == ObjectType::BUS){
+//            BusInfo bi = tc.GetBusInfo(q.query_body);
+//
+//            if (bi.type == RouteType::NOT_SET) {
+//                output_stream << "Bus "s << q.query_body << ": not found"s << std::endl;
+//                continue;
+//            }
+//
+//            output_stream << bi;
+//        } else if (q.query_type == ObjectType::STOP) {
+//            if ( ! tc.FindStop(q.query_body).first ) {
+//                output_stream << "Stop "s << q.query_body << ": not found"s << std::endl;
+//                continue;
+//            }
+//            const std::set<std::string_view>& bus_routes = tc.GetBusesForStop(q.query_body);
+//            if (bus_routes.empty()) {
+//                output_stream << "Stop "s << q.query_body << ": no buses"s << std::endl;
+//                continue;
+//            }
+//            output_stream << "Stop "s << q.query_body << ": buses "s;
+//            for (auto iter = bus_routes.begin(); iter != bus_routes.end(); ++iter) {
+//                output_stream << *iter;
+//                if (std::next(iter) != bus_routes.end()) {
+//                    output_stream << ' ';
+//                }
+//            }
+//            output_stream << std::endl;
+//        } else {
+//
+//        }
+//    }
 
-            if (bi.type == RouteType::NOT_SET) {
-                output_stream << "Bus "s << q.query_body << ": not found"s << std::endl;
-                continue;
-            }
-
-            output_stream << bi;
-        } else if (q.query_type == ObjectType::STOP) {
-            if ( ! tc.FindStop(q.query_body).first ) {
-                output_stream << "Stop "s << q.query_body << ": not found"s << std::endl;
-                continue;
-            }
-            const std::set<std::string_view>& bus_routes = tc.GetBusesForStop(q.query_body);
-            if (bus_routes.empty()) {
-                output_stream << "Stop "s << q.query_body << ": no buses"s << std::endl;
-                continue;
-            }
-            output_stream << "Stop "s << q.query_body << ": buses "s;
-            for (auto iter = bus_routes.begin(); iter != bus_routes.end(); ++iter) {
-                output_stream << *iter;
-                if (std::next(iter) != bus_routes.end()) {
-                    output_stream << ' ';
-                }
-            }
-            output_stream << std::endl;
-        } else {
-
-        }
-    }
-
-    return queries.size();
+    return num_queries;
 }
 
 }

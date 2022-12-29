@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include "input_reader.h"
+#include "transport_catalogue.h"
 
 namespace transport_catalogue {
 
@@ -15,13 +16,15 @@ struct Query {
 
 class StatisticReaderAndOutput {
 public:
-    StatisticReaderAndOutput() = default;
-    size_t ReadInputQueries(std::istream& input);
-    size_t ReadInputQueries(std::vector<std::string>& raw_strings);
+    explicit StatisticReaderAndOutput(const TransportCatalogue& tc): transport_catalogue_(tc) {
+    };
+    size_t ReadInput_Query_AndPrint(std::istream& input, std::ostream& output_stream);
 
-    [[nodiscard]] const std::vector<Query>& GetQueries() const;
+    void BusQueryAndPrint(std::string_view query_body, std::ostream& out);
+    void StopQueryAndPrint(std::string_view query_body, std::ostream& out);
 
 private:
+    const TransportCatalogue& transport_catalogue_;
     std::vector<Query> raw_input_;
 };
 

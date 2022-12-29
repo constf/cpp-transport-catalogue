@@ -8,21 +8,19 @@
 namespace transport_catalogue{
 
 
-bool TransportCatalogue::AddStop(const std::string& name, const Coordinates coords) {
+void TransportCatalogue::AddStop(const std::string& name, const Coordinates coords) {
     const Stop stop {name, coords};
 
-    return AddStop(stop);
+    AddStop(stop);
 }
 
-bool TransportCatalogue::AddStop(const Stop& stop) {
-    if (stops_index_.count(stop.stop_name) > 0) return false;
+void TransportCatalogue::AddStop(const Stop& stop) {
+    if (stops_index_.count(stop.stop_name) > 0) return;
 
     const Stop* ptr = &stops_.emplace_back(stop);
 
     std::string_view stop_name (ptr->stop_name); // string_view must point to permanent string, that will not disappear.
     auto [result, ok] = stops_index_.emplace(stop_name, ptr);
-
-    return true;
 }
 
 std::pair<bool, const Stop&> TransportCatalogue::FindStop(const std::string_view name) const {
@@ -55,7 +53,7 @@ const BusRoute& TransportCatalogue::FindBus(std::string_view name) {
     return *iter->second;
 }
 
-BusInfo TransportCatalogue::GetBusInfo(std::string_view bus_name) {
+BusInfo TransportCatalogue::GetBusInfo(std::string_view bus_name) const {
     BusInfo result;
     result.type = RouteType::NOT_SET;
 
@@ -98,7 +96,7 @@ BusInfo TransportCatalogue::GetBusInfo(std::string_view bus_name) {
     return result;
 }
 
-const std::set<std::string_view>& TransportCatalogue::GetBusesForStop(std::string_view stop) {
+const std::set<std::string_view>& TransportCatalogue::GetBusesForStop(std::string_view stop) const {
     const auto iter = stop_and_buses_.find(stop);
 
     if (iter == stop_and_buses_.end()) {
@@ -108,7 +106,7 @@ const std::set<std::string_view>& TransportCatalogue::GetBusesForStop(std::strin
     return iter->second;
 }
 
-bool TransportCatalogue::SetDistanceBetweenStops(const std::string_view stop, const std::string_view other_stop, int dist) {
+bool TransportCatalogue::SetDistanceBetweenStops(std::string_view stop, std::string_view other_stop, int dist) {
     auto iter_stop = stops_index_.find(stop);
     auto iter_other = stops_index_.find(other_stop);
     if (iter_stop == stops_index_.end() || iter_other == stops_index_.end()) return false; // one of stops is not present in the catalogue
@@ -133,7 +131,7 @@ bool TransportCatalogue::SetDistanceBetweenStops(const std::string_view stop, co
     return true;
 }
 
-int TransportCatalogue::GetDistanceBetweenStops(const std::string_view stop, const std::string_view other_stop) {
+int TransportCatalogue::GetDistanceBetweenStops(std::string_view stop, std::string_view other_stop) const {
     const auto iter_stop = stops_index_.find(stop);
     const auto iter_other = stops_index_.find(other_stop);
     if (iter_stop == stops_index_.end() || iter_other == stops_index_.end()) return -1;
