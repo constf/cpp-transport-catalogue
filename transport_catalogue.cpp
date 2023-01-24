@@ -8,7 +8,7 @@
 namespace transport_catalogue{
 
 
-void TransportCatalogue::AddStop(const std::string& name, const Coordinates coords) {
+void TransportCatalogue::AddStop(const std::string& name, const geo::Coordinates coords) {
     const Stop stop {name, coords};
 
     AddStop(stop);
@@ -20,7 +20,7 @@ void TransportCatalogue::AddStop(const Stop& stop) {
     const Stop* ptr = &stops_.emplace_back(stop);
 
     std::string_view stop_name (ptr->stop_name); // string_view must point to permanent string, that will not disappear.
-    auto [result, ok] = stops_index_.emplace(stop_name, ptr);
+    stops_index_.emplace(stop_name, ptr);
 }
 
 std::pair<bool, const Stop&> TransportCatalogue::FindStop(const std::string_view name) const {
@@ -37,7 +37,7 @@ bool TransportCatalogue::AddBus(const BusRoute &bus_route) {
     const BusRoute* ptr = &bus_routes_.emplace_back(bus_route);
 
     std::string_view bus_name (ptr->bus_name);
-    auto [result, ok] = routes_index_.emplace(bus_name, ptr);
+    routes_index_.emplace(bus_name, ptr);
 
     for (const Stop* stop : ptr->route_stops) {
         stop_and_buses_[stop->stop_name].insert(bus_name);

@@ -11,11 +11,21 @@
 
 #include "geo.h"
 
+
 namespace transport_catalogue {
 
 struct Stop {
     std::string stop_name;
-    Coordinates coordinates;
+    geo::Coordinates coordinates;
+};
+
+struct StopDistanceData {
+    std::string other_stop_name;
+    size_t distance;
+};
+
+struct StopWithDistances : Stop {
+    std::vector<StopDistanceData> distances;
 };
 
 const Stop EMPTY_STOP{};
@@ -69,32 +79,9 @@ private:
 class TransportCatalogue {
 public:
     TransportCatalogue() = default;
-    void AddStop(const std::string& name, const Coordinates coords);
+    void AddStop(const std::string& name, const geo::Coordinates coords);
     void AddStop(const Stop& stop);
     std::pair<bool, const Stop&> FindStop(const std::string_view name) const;
-    // По поводу optional: optional не позволяет использовать reference класс. Вот выдержка из класса optional, последняя строка в комментарии
-    // nullptr не передать, т.к. это ссылка, а не указатаель.
-    // Хотя, наверное, как-то можно. Я не нашёл. Если можно, расскажите ПОЖАЛУЙСТА!!!
-    // Оставил как было до дальнейших указаний.
-    //  template<typename _Tp>
-    //    class optional
-    //    : private _Optional_base<_Tp>,
-    //      private _Enable_copy_move<
-    //	// Copy constructor.
-    //	is_copy_constructible_v<_Tp>,
-    //	// Copy assignment.
-    //	__and_v<is_copy_constructible<_Tp>, is_copy_assignable<_Tp>>,
-    //	// Move constructor.
-    //	is_move_constructible_v<_Tp>,
-    //	// Move assignment.
-    //	__and_v<is_move_constructible<_Tp>, is_move_assignable<_Tp>>,
-    //	// Unique tag type.
-    //	optional<_Tp>>
-    //    {
-    //      static_assert(!is_same_v<remove_cv_t<_Tp>, nullopt_t>);
-    //      static_assert(!is_same_v<remove_cv_t<_Tp>, in_place_t>);
-    //      static_assert(!is_reference_v<_Tp>);
-
     bool AddBus(const BusRoute& bus_route);
     const BusRoute& FindBus(std::string_view name);
     BusInfo GetBusInfo(std::string_view bus_name) const;

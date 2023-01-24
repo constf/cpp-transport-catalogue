@@ -19,10 +19,6 @@ enum ObjectType {
     BUS
 };
 
-struct StopDistanceData {
-    std::string other_stop_name;
-    size_t distance;
-};
 
 std::string ReadLine(std::istream &input);
 
