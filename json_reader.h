@@ -2,10 +2,13 @@
 
 #include "json.h"
 #include "transport_catalogue.h"
+#include "map_renderer.h"
+#include "domain.h"
 #include <vector>
 
 const std::string BASE_DATA = "base_requests";
 const std::string USER_REQUESTS = "stat_requests";
+const std::string RENDER_SETTINGS = "render_settings";
 
 struct BusRouteJson {
     std::string bus_name;
@@ -19,7 +22,7 @@ using BaseRequest = std::variant<std::monostate, transport_catalogue::StopWithDi
 
 class JsonReader {
 public:
-    JsonReader(transport_catalogue::TransportCatalogue& tc) : transport_catalogue_(tc) {
+    explicit JsonReader(transport_catalogue::TransportCatalogue& tc) : transport_catalogue_(tc) {
     }
 
     size_t ReadJson(std::istream& input);
@@ -28,6 +31,8 @@ public:
     size_t QueryTC_WriteJsonToStream(std::ostream& out);
 
     size_t ReadJson_QueryTC_WriteJsonToStream(std::istream & input, std::ostream& out);
+
+    [[nodiscard]] RendererSettings GetRendererSetting() const;
 
 
 private:
@@ -42,4 +47,5 @@ private:
     json::Node ProcessOneUserRequestNode(const json::Node& user_request);
 };
 
+svg::Color ParseColor(const json::Node& node);
 inline json::Node GetErrorNode(int id);

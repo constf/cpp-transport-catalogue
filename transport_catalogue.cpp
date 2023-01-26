@@ -146,6 +146,15 @@ int TransportCatalogue::GetDistanceBetweenStops(std::string_view stop, std::stri
     return iter_dist->second;
 }
 
+    const std::map<std::string_view, const BusRoute*> TransportCatalogue::GetAllRoutesIndex() const {
+        std::map<std::string_view, const BusRoute*>  result(routes_index_.begin(), routes_index_.end());
+        return result;
+    }
+
+    const std::map<std::string_view, const Stop *> TransportCatalogue::GetAllStopsIndex() const {
+        std::map<std::string_view, const Stop*> result(stops_index_.begin(), stops_index_.end());
+        return result;
+    }
 
 
 } // transport_catalogue namespace

@@ -61,6 +61,12 @@ build CMakeFiles/transport_catalogue.dir/transport_catalogue.cpp.obj: CXX_COMPIL
   OBJECT_DIR = CMakeFiles\transport_catalogue.dir
   OBJECT_FILE_DIR = CMakeFiles\transport_catalogue.dir
 
+build CMakeFiles/transport_catalogue.dir/domain.cpp.obj: CXX_COMPILER__transport_catalogue_Debug C$:/Users/Konstantin/CPP$ projects/cpp-transport-catalogue/domain.cpp || cmake_object_order_depends_target_transport_catalogue
+  DEP_FILE = CMakeFiles\transport_catalogue.dir\domain.cpp.obj.d
+  FLAGS = -g
+  OBJECT_DIR = CMakeFiles\transport_catalogue.dir
+  OBJECT_FILE_DIR = CMakeFiles\transport_catalogue.dir
+
 build CMakeFiles/transport_catalogue.dir/geo.cpp.obj: CXX_COMPILER__transport_catalogue_Debug C$:/Users/Konstantin/CPP$ projects/cpp-transport-catalogue/geo.cpp || cmake_object_order_depends_target_transport_catalogue
   DEP_FILE = CMakeFiles\transport_catalogue.dir\geo.cpp.obj.d
   FLAGS = -g
@@ -105,7 +111,7 @@ build CMakeFiles/transport_catalogue.dir/map_renderer.cpp.obj: CXX_COMPILER__tra
 #############################################
 # Link the executable transport_catalogue.exe
 
-build transport_catalogue.exe: CXX_EXECUTABLE_LINKER__transport_catalogue_Debug CMakeFiles/transport_catalogue.dir/main.cpp.obj CMakeFiles/transport_catalogue.dir/transport_catalogue.cpp.obj CMakeFiles/transport_catalogue.dir/geo.cpp.obj CMakeFiles/transport_catalogue.dir/json.cpp.obj CMakeFiles/transport_catalogue.dir/json_reader.cpp.obj CMakeFiles/transport_catalogue.dir/request_handler.cpp.obj CMakeFiles/transport_catalogue.dir/svg.cpp.obj CMakeFiles/transport_catalogue.dir/map_renderer.cpp.obj
+build transport_catalogue.exe: CXX_EXECUTABLE_LINKER__transport_catalogue_Debug CMakeFiles/transport_catalogue.dir/main.cpp.obj CMakeFiles/transport_catalogue.dir/transport_catalogue.cpp.obj CMakeFiles/transport_catalogue.dir/domain.cpp.obj CMakeFiles/transport_catalogue.dir/geo.cpp.obj CMakeFiles/transport_catalogue.dir/json.cpp.obj CMakeFiles/transport_catalogue.dir/json_reader.cpp.obj CMakeFiles/transport_catalogue.dir/request_handler.cpp.obj CMakeFiles/transport_catalogue.dir/svg.cpp.obj CMakeFiles/transport_catalogue.dir/map_renderer.cpp.obj
   FLAGS = -g
   LINK_LIBRARIES = -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
   OBJECT_DIR = CMakeFiles\transport_catalogue.dir

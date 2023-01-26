@@ -10,51 +10,11 @@
 #include <functional>
 
 #include "geo.h"
+#include "domain.h"
 
 
 namespace transport_catalogue {
 
-struct Stop {
-    std::string stop_name;
-    geo::Coordinates coordinates;
-};
-
-struct StopDistanceData {
-    std::string other_stop_name;
-    size_t distance;
-};
-
-struct StopWithDistances : Stop {
-    std::vector<StopDistanceData> distances;
-};
-
-const Stop EMPTY_STOP{};
-
-enum RouteType{
-    NOT_SET,
-    CIRCLE_ROUTE,
-    RETURN_ROUTE
-};
-
-struct BusRoute{
-    std::string bus_name;
-    RouteType type;
-    std::vector<const Stop*> route_stops;
-};
-
-const BusRoute EMPTY_BUS_ROUTE{};
-const std::set<std::string_view> EMPTY_BUS_ROUTE_SET{};
-
-struct BusInfo{
-    std::string_view bus_name;
-    RouteType type;
-    size_t stops_number;
-    size_t unique_stops;
-    size_t route_length;
-    double curvature;
-};
-
-std::ostream& operator<<(std::ostream&os, const BusInfo& bi);
 
 struct StopsPointers {
 public:
@@ -88,6 +48,8 @@ public:
     const std::set<std::string_view>& GetBusesForStop(std::string_view stop) const;
     bool SetDistanceBetweenStops(std::string_view stop, std::string_view other_stop, int dist);
     int GetDistanceBetweenStops(std::string_view stop, std::string_view other_stop) const;
+    const std::map<std::string_view, const BusRoute*> GetAllRoutesIndex() const;
+    const std::map<std::string_view, const Stop*> GetAllStopsIndex() const;
 
 private:
     std::deque<Stop> stops_;

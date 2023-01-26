@@ -1,14 +1,19 @@
 #include "domain.h"
+#include <iomanip>
 
-/*
- * В этом файле вы можете разместить классы/структуры, которые являются частью предметной области
- * (domain) вашего приложения и не зависят от транспортного справочника. Например Автобусные
- * маршруты и Остановки.
- *
- * Их можно было бы разместить и в transport_catalogue.h, однако вынесение их в отдельный
- * заголовочный файл может оказаться полезным, когда дело дойдёт до визуализации карты маршрутов:
- * визуализатор карты (map_renderer) можно будет сделать независящим от транспортного справочника.
- *
- * Если структура вашего приложения не позволяет так сделать, просто оставьте этот файл пустым.
- *
- */
+
+namespace transport_catalogue {
+
+    std::ostream& operator<<(std::ostream& os, const BusInfo& bi) {
+        using namespace std::literals;
+        double length = bi.route_length;
+
+        os  << "Bus "s << bi.bus_name << ": "s << bi.stops_number << " stops on route, "s
+            << bi.unique_stops << " unique stops, "s << std::setprecision(6) << length << " route length, "s
+            << std::setprecision(6) << bi.curvature << " curvature"s << std::endl;
+
+        return os;
+    }
+
+
+}

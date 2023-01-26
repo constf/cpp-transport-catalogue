@@ -243,6 +243,119 @@ json::Node JsonReader::ProcessOneUserRequestNode(const json::Node &user_request)
 
 }
 
+RendererSettings JsonReader::GetRendererSetting() const {
+    using namespace std::literals;
+
+    const auto& root_node = root_.back().GetRoot();
+    if (!root_node.IsMap()) {
+        throw json::ParsingError("Error reading JSON data with render settings.");
+    }
+
+    const json::Dict& dict = root_node.AsMap();
+    auto iter = dict.find(RENDER_SETTINGS);
+    if (iter == dict.end() || !(iter->second.IsMap()) ) {
+        throw json::ParsingError("Error reading JSON data with render settings..");
+    }
+
+    RendererSettings settings;
+    const json::Dict render_settings = iter->second.AsMap();
+    if (const auto width_i = render_settings.find("width"s); width_i != render_settings.end() && width_i->second.IsDouble()) {
+        settings.width = width_i->second.AsDouble();
+    } else throw json::ParsingError("Error while parsing renderer settings, width data.");
+
+    if (const auto height_i = render_settings.find("height"s); height_i != render_settings.end() && height_i->second.IsDouble()) {
+        settings.height = height_i->second.AsDouble();
+    } else throw json::ParsingError("Error while parsing renderer settings, height data.");
+
+    if (const auto padd_i = render_settings.find("padding"s); padd_i != render_settings.end() && padd_i->second.IsDouble()) {
+        settings.padding = padd_i->second.AsDouble();
+    } else throw json::ParsingError("Error while parsing renderer settings, padding data.");
+
+    if (const auto field_iter = render_settings.find("line_width"s); field_iter != render_settings.end() && field_iter->second.IsDouble()) {
+        settings.line_width = field_iter->second.AsDouble();
+    } else throw json::ParsingError("Error while parsing renderer settings, line width data.");
+
+    if (const auto field_iter = render_settings.find("stop_radius"s); field_iter != render_settings.end() && field_iter->second.IsDouble()) {
+        settings.stop_radius = field_iter->second.AsDouble();
+    } else throw json::ParsingError("Error while parsing renderer settings, stop radius data.");
+
+    if (const auto field_iter = render_settings.find("bus_label_font_size"s); field_iter != render_settings.end() && field_iter->second.IsInt()) {
+        settings.bus_label_font_size = field_iter->second.AsInt();
+    } else throw json::ParsingError("Error while parsing renderer settings, bus label font size data.");
+
+    if (const auto field_iter = render_settings.find("bus_label_offset"s); field_iter != render_settings.end() && field_iter->second.IsArray()) {
+        json::Array arr = field_iter->second.AsArray();
+        if (arr.size() != 2) throw json::ParsingError("Error while parsing renderer settings, bus label font offset data.");
+        settings.bus_label_offset.x = arr[0].AsDouble();
+        settings.bus_label_offset.y = arr[1].AsDouble();
+    } else throw json::ParsingError("Error while parsing renderer settings, bus label font offset data.");
+
+    if (const auto field_iter = render_settings.find("stop_label_font_size"s); field_iter != render_settings.end() && field_iter->second.IsInt()) {
+        settings.stop_label_font_size = field_iter->second.AsInt();
+    } else throw json::ParsingError("Error while parsing renderer settings, stop label font size data.");
+
+    if (const auto field_iter = render_settings.find("stop_label_offset"s); field_iter != render_settings.end() && field_iter->second.IsArray()) {
+        json::Array arr = field_iter->second.AsArray();
+        if (arr.size() != 2) throw json::ParsingError("Error while parsing renderer settings, stop label font offset data.");
+        settings.stop_label_offset.x = arr[0].AsDouble();
+        settings.stop_label_offset.y = arr[1].AsDouble();
+    } else throw json::ParsingError("Error while parsing renderer settings, stop label font offset data.");
+
+    if (const auto field_iter = render_settings.find("underlayer_color"s); field_iter != render_settings.end() ) {
+        svg::Color color = ParseColor(field_iter->second);
+        if (std::holds_alternative<std::monostate>(color)) {
+            throw json::ParsingError("Error while parsing renderer settings, underlayer color data.");
+        }
+
+        settings.underlayer_color = color;
+    } else throw json::ParsingError("Error while parsing renderer settings, underlayer color data.");
+
+    if (const auto field_iter = render_settings.find("underlayer_width"s); field_iter != render_settings.end() && field_iter->second.IsDouble()) {
+        settings.underlayer_width = field_iter->second.AsDouble();
+    } else throw json::ParsingError("Error while parsing renderer settings, underlayer width data.");
+
+    if (const auto field_iter = render_settings.find("color_palette"s); field_iter != render_settings.end() && field_iter->second.IsArray()) {
+        json::Array arr = field_iter->second.AsArray();
+        for (const auto& color_node : arr) {
+            svg::Color color = ParseColor(color_node);
+            if (std::holds_alternative<std::monostate>(color)) {
+                throw json::ParsingError("Error while parsing renderer settings, color palette data.");
+            }
+            settings.color_palette.emplace_back(color);
+        }
+    } else throw json::ParsingError("Error while parsing renderer settings, color palette data.");
+
+    return settings;
+}
+
+svg::Color ParseColor(const json::Node& node){
+    if (node.IsString()) {
+        return {node.AsString()};
+    }
+
+    if (node.IsArray()) {
+        json::Array arr = node.AsArray();
+        if (arr.size() == 3) {
+            uint8_t red = arr[0].AsInt();
+            uint8_t green = arr[1].AsInt();
+            uint8_t blue = arr[2].AsInt();
+
+            return { svg::Rgb(red, green, blue) };
+        }
+        if (arr.size() == 4) {
+            uint8_t red = arr[0].AsInt();
+            uint8_t green = arr[1].AsInt();
+            uint8_t blue = arr[2].AsInt();
+            double opacity = arr[3].AsDouble();
+
+            return { svg::Rgba(red, green, blue, opacity) };
+        }
+    }
+
+    return {};
+}
+
+
 inline json::Node GetErrorNode(int id) {
     using namespace std::literals;
     json::Dict result;
