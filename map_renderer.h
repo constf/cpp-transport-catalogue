@@ -110,7 +110,14 @@ public:
 
 private:
     const RendererSettings& settings_;
+    SphereProjector* projector_ = nullptr;
+    const std::map<std::string_view, const transport_catalogue::BusRoute*>* routes_ = nullptr;
+    const std::map<std::string_view, const transport_catalogue::Stop*>* stops_ = nullptr;
 
     svg::Color GetNextPalleteColor(size_t &color_count) const;
+    svg::Color GetPalletColor(size_t route_number) const;
+    void RenderLines(svg::Document& svg_doc) const;
+    void RenderRouteNames(svg::Document& svg_doc) const;
+    void RenderStopCircles(const transport_catalogue::TransportCatalogue& tc, svg::Document& svg_doc) const;
+    void RenderStopNames(const transport_catalogue::TransportCatalogue& tc, svg::Document& svg_doc) const;
 };
-
