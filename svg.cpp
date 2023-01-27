@@ -164,14 +164,14 @@ namespace svg {
     void Document::Render(std::ostream &out) const {
         RenderContext context(out, 2, 2);
 
-        std::cout << "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>"sv << std::endl;
-        std::cout << "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">"sv << std::endl;
+        out << "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>"sv << std::endl;
+        out << "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">"sv << std::endl;
 
         for (auto iter = objects_ptrs_.begin(); iter != objects_ptrs_.end(); ++iter) {
             (*iter)->Render(context);
         }
 
-        std::cout << "</svg>"sv;
+        out << "</svg>"sv;
     }
 
 

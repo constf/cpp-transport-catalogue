@@ -174,7 +174,7 @@ size_t JsonReader::QueryTC_WriteJsonToStream(std::ostream &out) {
 
         result.emplace_back(std::move(ProcessOneUserRequestNode(node)));
     }
-    json::PrintNode(result, out);
+    json::PrintNode(json::Node{result}, out);
 
     return result.size();
 }
@@ -198,16 +198,32 @@ json::Node JsonReader::ProcessOneUserRequestNode(const json::Node &user_request)
         id = id_i->second.AsInt();
     } else throw json::ParsingError("Error reading JSON data with user requests to database. One of node's fields is crippled.");
 
-    std::string name;
-    if (const auto name_i = request_fields.find("name"s); name_i != request_fields.end() && name_i->second.IsString()) {
-        name = name_i->second.AsString();
-    } else throw json::ParsingError("Error reading JSON data with user requests to database. One of node's fields is crippled.");
-
     const auto type_i = request_fields.find("type"s);
     if ( type_i == request_fields.end() || !(type_i->second.IsString()) ){
         throw json::ParsingError("Error reading JSON data with user requests to database. One of node's fields is crippled.");
     }
     std::string type = type_i->second.AsString();
+
+    if ( type == "Map"s) {
+        RendererSettings rs = GetRendererSetting();
+        MapRenderer mr(rs);
+
+        std::ostringstream stream;
+        mr.RenderSvgMap(transport_catalogue_, stream);
+
+        json::Dict result;
+        result.emplace("request_id"s, id);
+        result.emplace("map"s, std::move(stream.str()));
+
+        return {result};
+    }
+
+    std::string name;
+    if (const auto name_i = request_fields.find("name"s); name_i != request_fields.end() && name_i->second.IsString()) {
+        name = name_i->second.AsString();
+    } else throw json::ParsingError("Error reading JSON data with user requests to database. One of node's fields is crippled.");
+
+
     if ( type == "Bus"s) {
         BusInfo bi = transport_catalogue_.GetBusInfo(name);
         if (bi.type == RouteType::NOT_SET) {
@@ -221,8 +237,9 @@ json::Node JsonReader::ProcessOneUserRequestNode(const json::Node &user_request)
         result.emplace("unique_stop_count"s, static_cast<int>(bi.unique_stops));
 
         return {result};
+    }
 
-    } else if (type == "Stop"s) {
+    if (type == "Stop"s) {
         if ( ! transport_catalogue_.FindStop(name).first ) {
             return GetErrorNode(id);
         }
@@ -236,11 +253,9 @@ json::Node JsonReader::ProcessOneUserRequestNode(const json::Node &user_request)
         result.emplace("buses"s, buses);
 
         return {result};
-
-    } else {
-        throw json::ParsingError("Error reading JSON data with user requests to database. Node's type field contains invalid data.");
     }
 
+    throw json::ParsingError("Error reading JSON data with user requests to database. Node's type field contains invalid data.");
 }
 
 RendererSettings JsonReader::GetRendererSetting() const {
