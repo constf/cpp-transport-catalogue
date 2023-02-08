@@ -1,4 +1,5 @@
 #include "json_reader.h"
+#include "json_builder.h"
 
 
 size_t JsonReader::ReadJson(std::istream &input) {
@@ -6,8 +7,8 @@ size_t JsonReader::ReadJson(std::istream &input) {
 
     try {
         json::Document doc = json::Load(input);
-        if (doc.GetRoot().IsMap()) {
-            result = doc.GetRoot().AsMap().size();
+        if (doc.GetRoot().IsDict()) {
+            result = doc.GetRoot().AsDict().size();
             root_.emplace_back(std::move(doc));
         }
     } catch (const json::ParsingError& e) {
@@ -32,10 +33,10 @@ size_t JsonReader::ParseJsonToRawData() {
     size_t result = 0;
 
     const json::Node& root_node = root_.back().GetRoot();
-    if (!root_node.IsMap()) {
+    if (!root_node.IsDict()) {
         throw json::ParsingError("Error reading JSON data for database filling.");
     }
-    const json::Dict& dict = root_node.AsMap();
+    const json::Dict& dict = root_node.AsDict();
     auto iter = dict.find(BASE_DATA);
     if (iter == dict.end() || !(iter->second.IsArray()) ) {
         throw json::ParsingError("Error reading JSON data for database filling.");
@@ -63,8 +64,8 @@ size_t JsonReader::ParseJsonToRawData() {
 BaseRequest JsonReader::ParseAddDataNode(const json::Node &node) const {
     using namespace std::literals;
     using namespace transport_catalogue;
-    if (!node.IsMap()) return {};
-    const json::Dict& dict = node.AsMap();
+    if (!node.IsDict()) return {};
+    const json::Dict& dict = node.AsDict();
     const auto type_i = dict.find("type"s);
     if (type_i == dict.end()) return {};
     if (type_i->second == "Stop"s) {
@@ -83,8 +84,8 @@ BaseRequest JsonReader::ParseAddDataNode(const json::Node &node) const {
         } else return {};
 
         const auto dist_i = dict.find("road_distances"s);
-        if (dist_i != dict.end() && !(dist_i->second.IsMap())) return {}; // проверка, что это словарь. он необязательный для остановки.
-        for (const auto& [other_name, other_dist] : dist_i->second.AsMap()) {
+        if (dist_i != dict.end() && !(dist_i->second.IsDict())) return {}; // проверка, что это словарь. он необязательный для остановки.
+        for (const auto& [other_name, other_dist] : dist_i->second.AsDict()) {
             if (!other_dist.IsInt()) return {};
             stop.distances.emplace_back(StopDistanceData{other_name, static_cast<size_t>(other_dist.AsInt())});
         }
@@ -156,27 +157,34 @@ bool JsonReader::FillTransportCatalogue() {
 
 size_t JsonReader::QueryTC_WriteJsonToStream(std::ostream &out) {
     const auto& root_node = root_.back().GetRoot();
-    if (!root_node.IsMap()) {
+    if (!root_node.IsDict()) {
         throw json::ParsingError("Error reading JSON data with user requests to database.");
     }
 
-    const json::Dict& dict = root_node.AsMap();
+    const json::Dict& dict = root_node.AsDict();
     auto iter = dict.find(USER_REQUESTS);
     if (iter == dict.end() || !(iter->second.IsArray()) ) {
         throw json::ParsingError("Error reading JSON data with user requests to database.");
     }
 
-    json::Array result;
+    //json::Array result;
+    json::Builder builder;
+    builder.StartArray();
+
     for (const json::Node& node : iter->second.AsArray()) {
-        if (!node.IsMap()) {
+        if (!node.IsDict()) {
             throw json::ParsingError("Error reading JSON data with user requests to database. One of nodes is not a dictionary.");
         }
 
-        result.emplace_back(std::move(ProcessOneUserRequestNode(node)));
-    }
-    json::PrintNode(json::Node{result}, out);
+        builder.Value(std::move(ProcessOneUserRequestNode(node)));
+        //result.emplace_back(std::move(ProcessOneUserRequestNode(node)));
 
-    return result.size();
+    }
+    json::Node resnode = builder.EndArray().Build();
+    //json::PrintNode(json::Node{result}, out);
+    json::PrintNode(resnode, out);
+
+    return resnode.AsArray().size();
 }
 
 size_t JsonReader::ReadJson_QueryTC_WriteJsonToStream(std::istream &input, std::ostream &out) {
@@ -188,10 +196,10 @@ json::Node JsonReader::ProcessOneUserRequestNode(const json::Node &user_request)
     using namespace std::literals;
     using namespace transport_catalogue;
 
-    if (!user_request.IsMap()) {
+    if (!user_request.IsDict()) {
         throw json::ParsingError("Error reading JSON data with user requests to database. One of nodes is not a dictionary.");
     }
-    const json::Dict& request_fields = user_request.AsMap();
+    const json::Dict& request_fields = user_request.AsDict();
 
     int id = -1;
     if (const auto id_i = request_fields.find("id"s); id_i != request_fields.end() && id_i->second.IsInt()) {
@@ -211,11 +219,12 @@ json::Node JsonReader::ProcessOneUserRequestNode(const json::Node &user_request)
         std::ostringstream stream;
         mr.RenderSvgMap(transport_catalogue_, stream);
 
-        json::Dict result;
-        result.emplace("request_id"s, id);
-        result.emplace("map"s, std::move(stream.str()));
+//        json::Dict result;
+//        result.emplace("request_id"s, id);
+//        result.emplace("map"s, std::move(stream.str()));
+//        return {result};
 
-        return {result};
+        return json::Builder().StartDict().Key("request_id"s).Value(id).Key("map"s).Value(std::move(stream.str())).EndDict().Build();
     }
 
     std::string name;
@@ -229,14 +238,18 @@ json::Node JsonReader::ProcessOneUserRequestNode(const json::Node &user_request)
         if (bi.type == RouteType::NOT_SET) {
             return GetErrorNode(id);
         }
-        json::Dict result;
-        result.emplace("request_id"s, id);
-        result.emplace("curvature"s, bi.curvature);
-        result.emplace("route_length"s, static_cast<int>(bi.route_length));
-        result.emplace("stop_count"s, static_cast<int>(bi.stops_number));
-        result.emplace("unique_stop_count"s, static_cast<int>(bi.unique_stops));
+//        json::Dict result;
+//        result.emplace("request_id"s, id);
+//        result.emplace("curvature"s, bi.curvature);
+//        result.emplace("route_length"s, static_cast<int>(bi.route_length));
+//        result.emplace("stop_count"s, static_cast<int>(bi.stops_number));
+//        result.emplace("unique_stop_count"s, static_cast<int>(bi.unique_stops));
+//        return {result};
 
-        return {result};
+
+        return json::Builder().StartDict().Key("request_id"s).Value(id).Key("curvature"s).Value(bi.curvature)
+                    .Key("route_length"s).Value(static_cast<int>(bi.route_length)).Key("stop_count"s).Value(static_cast<int>(bi.stops_number))
+                    .Key("unique_stop_count"s).Value(static_cast<int>(bi.unique_stops)).EndDict().Build();
     }
 
     if (type == "Stop"s) {
@@ -245,14 +258,19 @@ json::Node JsonReader::ProcessOneUserRequestNode(const json::Node &user_request)
         }
         json::Dict result;
         json::Array buses;
+        json::Builder builder;
+        builder.StartDict().Key("buses"s).StartArray();
         const std::set<std::string_view>& bus_routes = transport_catalogue_.GetBusesForStop(name);
         for (auto bus_route : bus_routes) {
-            buses.emplace_back( std::move(std::string{bus_route}) );
+            builder.Value(std::move(std::string{bus_route}));
+            //buses.emplace_back( std::move(std::string{bus_route}) );
         }
-        result.emplace("request_id"s, id);
-        result.emplace("buses"s, buses);
+        builder.EndArray();
+        builder.Key("request_id"s).Value(id).EndDict();
+        //result.emplace("request_id"s, id);
+        //result.emplace("buses"s, buses);
 
-        return {result};
+        return builder.Build();
     }
 
     throw json::ParsingError("Error reading JSON data with user requests to database. Node's type field contains invalid data.");
@@ -262,18 +280,18 @@ RendererSettings JsonReader::GetRendererSetting() const {
     using namespace std::literals;
 
     const auto& root_node = root_.back().GetRoot();
-    if (!root_node.IsMap()) {
+    if (!root_node.IsDict()) {
         throw json::ParsingError("Error reading JSON data with render settings.");
     }
 
-    const json::Dict& dict = root_node.AsMap();
+    const json::Dict& dict = root_node.AsDict();
     auto iter = dict.find(RENDER_SETTINGS);
-    if (iter == dict.end() || !(iter->second.IsMap()) ) {
+    if (iter == dict.end() || !(iter->second.IsDict()) ) {
         throw json::ParsingError("Error reading JSON data with render settings..");
     }
 
     RendererSettings settings;
-    const json::Dict render_settings = iter->second.AsMap();
+    const json::Dict render_settings = iter->second.AsDict();
     if (const auto width_i = render_settings.find("width"s); width_i != render_settings.end() && width_i->second.IsDouble()) {
         settings.width = width_i->second.AsDouble();
     } else throw json::ParsingError("Error while parsing renderer settings, width data.");
@@ -373,9 +391,12 @@ svg::Color ParseColor(const json::Node& node){
 
 inline json::Node GetErrorNode(int id) {
     using namespace std::literals;
-    json::Dict result;
-    result.emplace("request_id"s, id);
-    result.emplace("error_message"s, "not found"s);
+//    json::Dict result;
+//    result.emplace("request_id"s, id);
+//    result.emplace("error_message"s, "not found"s);
+//    return {result};
 
-    return {result};
+    return json::Builder().StartDict().Key("request_id"s).Value(id)
+                .Key("error_message"s).Value("not found"s).EndDict()
+                .Build();
 }
