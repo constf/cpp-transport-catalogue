@@ -106,6 +106,7 @@ public:
     explicit MapRenderer(const RendererSettings& rs) : settings_(rs) {
     }
     void RenderSvgMap(const transport_catalogue::TransportCatalogue& tc, std::ostream& out);
+    void RenderSvgMap(const transport_catalogue::TransportCatalogue &tc, svg::Document& svg_doc);
 
 
 private:

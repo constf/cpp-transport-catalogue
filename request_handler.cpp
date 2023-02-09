@@ -14,3 +14,11 @@ const std::set<std::string_view> &RequestHandler::GetBusesByStop(const std::stri
     return db_.GetBusesForStop(stop_name);
 }
 
+void RequestHandler::RenderMap(svg::Document& svg_doc) const {
+    RendererSettings rs = json_reader_.GetRendererSetting();
+    MapRenderer mr(rs);
+    mr.RenderSvgMap(db_, svg_doc);
+}
+
+
+

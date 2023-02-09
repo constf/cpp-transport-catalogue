@@ -9,7 +9,41 @@ svg::Point SphereProjector::operator()(geo::Coordinates coords) const {
     };
 }
 
+void MapRenderer::RenderSvgMap(const transport_catalogue::TransportCatalogue &tc, svg::Document& svg_doc) {
+    // get all routes and all stops of the routes
+    const std::map<std::string_view, const transport_catalogue::Stop*> stops = tc.GetAllStopsIndex();
+    stops_ = &stops;
+
+    // prepare data for SphereProjector init
+    std::vector<geo::Coordinates> all_route_stops_coordinates;
+    for (const auto& stop : stops) {
+        if ( tc.GetBusesForStop(stop.first).empty() ) continue;
+        all_route_stops_coordinates.push_back(stop.second->coordinates);
+    }
+    SphereProjector projector(all_route_stops_coordinates.begin(), all_route_stops_coordinates.end(),
+                              settings_.width, settings_.height, settings_.padding);
+    projector_ = &projector;
+
+    const std::map<std::string_view, const transport_catalogue::BusRoute*> routes = tc.GetAllRoutesIndex();
+    routes_ = &routes;
+
+    RenderLines(svg_doc);
+    RenderRouteNames(svg_doc);
+    RenderStopCircles(tc, svg_doc);
+    RenderStopNames(tc, svg_doc);
+
+    stops_ = nullptr;
+    routes_ = nullptr;
+    projector_ = nullptr;
+}
+
+
 void MapRenderer::RenderSvgMap(const transport_catalogue::TransportCatalogue &tc, std::ostream& out) {
+    svg::Document svg_doc;
+    RenderSvgMap(tc, svg_doc);
+    svg_doc.Render(out);
+    return;
+
     // get all routes and all stops of the routes
     const std::map<std::string_view, const transport_catalogue::Stop*> stops = tc.GetAllStopsIndex();
     stops_ = &stops;
@@ -27,7 +61,6 @@ void MapRenderer::RenderSvgMap(const transport_catalogue::TransportCatalogue &tc
     const std::map<std::string_view, const transport_catalogue::BusRoute*> routes = tc.GetAllRoutesIndex();
     routes_ = &routes;
 
-    svg::Document svg_doc;
     RenderLines(svg_doc);
     RenderRouteNames(svg_doc);
     RenderStopCircles(tc, svg_doc);

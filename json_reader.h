@@ -27,10 +27,10 @@ public:
 
     size_t ReadJson(std::istream& input);
 
-    size_t ReadJson_FillTransportCatalogue(std::istream& input);
-    size_t QueryTC_WriteJsonToStream(std::ostream& out);
+    size_t ReadJsonToTransportCatalogue(std::istream& input);
+    size_t QueryTcWriteJsonToStream(std::ostream& out);
 
-    size_t ReadJson_QueryTC_WriteJsonToStream(std::istream & input, std::ostream& out);
+    size_t ReadJsonQueryTcWriteJsonToStream(std::istream & input, std::ostream& out);
 
     [[nodiscard]] RendererSettings GetRendererSetting() const;
 
@@ -41,10 +41,16 @@ private:
     std::vector<transport_catalogue::StopWithDistances> raw_stops_;
     std::vector<BusRouteJson> raw_buses_;
 
-    BaseRequest ParseAddDataNode(const json::Node& node) const;
+    BaseRequest ParseDataNode(const json::Node& node) const;
     size_t ParseJsonToRawData();
     bool FillTransportCatalogue();
     json::Node ProcessOneUserRequestNode(const json::Node& user_request);
+    std::optional<geo::Coordinates> ParseCoordinates(const json::Dict& dict) const;
+    BaseRequest ParseDataStop(const json::Dict& dict) const;
+    BaseRequest ParseDataBus(const json::Dict& dict) const;
+    json::Node GenerateMapNode(int id) const;
+    json::Node GenerateBusNode(int id, std::string& name) const;
+    json::Node GenerateStopNode(int id, std::string& name) const;
 };
 
 svg::Color ParseColor(const json::Node& node);

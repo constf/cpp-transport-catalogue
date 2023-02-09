@@ -24,18 +24,19 @@ namespace json {
     };
 
 
-    class Node {
+    class Node : public std::variant<std::nullptr_t, int, double, std::string, bool, Array, Dict> {
     public:
-        using Value = std::variant<std::nullptr_t, int, double, std::string, bool, Array, Dict>;
+        using variant::variant;
+        using Value = variant;
 
-        template <typename ValueType>
-        Node(ValueType value) : value_(value) {
-        }
+//        template <typename ValueType>
+//        Node(ValueType value) : value_(value) {
+//        }
+//
+//        Node() : value_(nullptr){
+//        }
 
-        Node() : value_(nullptr){
-        }
-
-        const Value& GetValue() const {return value_;}
+        const Value& GetValue() const {return *this;}
 
         bool IsInt() const;
         bool IsDouble() const;
@@ -55,8 +56,8 @@ namespace json {
         Array& AsArray();
         Dict& AsDict();
 
-        bool operator==(const Node& other) const;
-        bool operator!=(const Node& other) const;
+//        bool operator==(const Node& other) const;
+//        bool operator!=(const Node& other) const;
 
 
     private:
