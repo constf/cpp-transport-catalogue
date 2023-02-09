@@ -198,7 +198,6 @@ size_t JsonReader::QueryTcWriteJsonToStream(std::ostream &out) {
         throw json::ParsingError("Error reading JSON data with user requests to database.");
     }
 
-    //json::Array result;
     json::Builder builder;
     builder.StartArray();
 
@@ -208,14 +207,11 @@ size_t JsonReader::QueryTcWriteJsonToStream(std::ostream &out) {
         }
 
         builder.Value(std::move(ProcessOneUserRequestNode(node)));
-        //result.emplace_back(std::move(ProcessOneUserRequestNode(node)));
-
     }
-    json::Node resnode = builder.EndArray().Build();
-    //json::PrintNode(json::Node{result}, out);
-    json::PrintNode(resnode, out);
+    json::Node res_node = builder.EndArray().Build();
+    json::PrintNode(res_node, out);
 
-    return resnode.AsArray().size();
+    return res_node.AsArray().size();
 }
 
 size_t JsonReader::ReadJsonQueryTcWriteJsonToStream(std::istream &input, std::ostream &out) {
@@ -447,11 +443,6 @@ svg::Color ParseColor(const json::Node& node){
 
 
 inline json::Node GetErrorNode(int id) {
-//    json::Dict result;
-//    result.emplace("request_id"s, id);
-//    result.emplace("error_message"s, "not found"s);
-//    return {result};
-
     return json::Builder().StartDict().Key("request_id"s).Value(id)
                 .Key("error_message"s).Value("not found"s).EndDict()
                 .Build();

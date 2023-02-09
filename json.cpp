@@ -380,15 +380,6 @@ namespace json {
         return std::holds_alternative<Dict>(*this);
     }
 
-//    bool Node::operator==(const Node& other) const {
-//        return *this == other;
-//    }
-//
-//    bool Node::operator!=(const Node& other) const {
-//        return this->value_ != other.value_;
-//    }
-
-
     Document::Document(Node root)
             : root_(move(root)) {
     }

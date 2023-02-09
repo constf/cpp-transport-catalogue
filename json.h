@@ -29,13 +29,6 @@ namespace json {
         using variant::variant;
         using Value = variant;
 
-//        template <typename ValueType>
-//        Node(ValueType value) : value_(value) {
-//        }
-//
-//        Node() : value_(nullptr){
-//        }
-
         const Value& GetValue() const {return *this;}
 
         bool IsInt() const;
@@ -56,12 +49,6 @@ namespace json {
         Array& AsArray();
         Dict& AsDict();
 
-//        bool operator==(const Node& other) const;
-//        bool operator!=(const Node& other) const;
-
-
-    private:
-        Value value_;
     };
 
     class Document {

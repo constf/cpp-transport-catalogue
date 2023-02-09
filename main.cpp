@@ -11,7 +11,4 @@ int main() {
     JsonReader reader(tc);
     reader.ReadJsonToTransportCatalogue(std::cin);
     reader.QueryTcWriteJsonToStream(std::cout);
-//    RendererSettings rs = reader.GetRendererSetting();
-//    MapRenderer mr(rs);
-//    mr.RenderSvgMap(tc, std::cout);
 }
