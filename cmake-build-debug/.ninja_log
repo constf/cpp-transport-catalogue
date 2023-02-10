@@ -84,3 +84,16 @@
 5681	9737	6976562758155161	transport_catalogue.exe	e30702114afefb74
 16	5067	6976564831278151	CMakeFiles/transport_catalogue.dir/json_reader.cpp.obj	8ec7cc1cf6903577
 5068	8640	6976564866982312	transport_catalogue.exe	e30702114afefb74
+73	2555	6977586156372171	CMakeFiles/transport_catalogue.dir/svg.cpp.obj	a46773ffa110cf12
+20	2905	6977586159828749	CMakeFiles/transport_catalogue.dir/request_handler.cpp.obj	c9ad17472feefd39
+57	3080	6977586161598291	CMakeFiles/transport_catalogue.dir/json_builder.cpp.obj	bfc8a655ccc5e67c
+6	3330	6977586164124424	CMakeFiles/transport_catalogue.dir/main.cpp.obj	800180342fa0b621
+43	3617	6977586166998389	CMakeFiles/transport_catalogue.dir/map_renderer.cpp.obj	da8b4ae92a275b2e
+31	4579	6977586176556541	CMakeFiles/transport_catalogue.dir/json_reader.cpp.obj	8ec7cc1cf6903577
+4579	8575	6977586216517280	transport_catalogue.exe	e30702114afefb74
+18	1504	6977605050473770	CMakeFiles/transport_catalogue.dir/json_builder.cpp.obj	bfc8a655ccc5e67c
+5	2819	6977605063574540	CMakeFiles/transport_catalogue.dir/json_reader.cpp.obj	8ec7cc1cf6903577
+2819	6194	6977605097318128	transport_catalogue.exe	e30702114afefb74
+19	1610	6977622388279582	CMakeFiles/transport_catalogue.dir/json_builder.cpp.obj	bfc8a655ccc5e67c
+7	3086	6977622403020777	CMakeFiles/transport_catalogue.dir/json_reader.cpp.obj	8ec7cc1cf6903577
+3086	6234	6977622434480627	transport_catalogue.exe	e30702114afefb74
