@@ -28,6 +28,11 @@ size_t JsonReader::ReadJsonToTransportCatalogue(std::istream &input) {
 
     FillTransportCatalogue();
 
+    routing_settings_ = GetRoutingSettings();
+    graph_ptr_ = std::make_unique<transport_catalogue::TransportCatalogueGraph>(transport_catalogue_, routing_settings_);
+    router_ptr_ = std::make_unique<graph::Router<double>>(*graph_ptr_);
+
+
     return result;
 }
 
@@ -244,6 +249,22 @@ json::Node JsonReader::ProcessOneUserRequestNode(const json::Node &user_request)
         return GenerateMapNode(id);
     }
 
+    if ( type == "Route"s) {
+        std::string from_stop, to_stop;
+        if (const auto from_it = request_fields.find("from"s); from_it != request_fields.end() && from_it->second.IsString()) {
+            from_stop = from_it->second.AsString();
+        } else {
+            throw json::ParsingError("Error reading JSON data with user requests to database. Route->from field is crippled.");
+        }
+        if (const auto to_it = request_fields.find("to"s); to_it != request_fields.end() && to_it->second.IsString()) {
+            to_stop = to_it->second.AsString();
+        } else {
+            throw json::ParsingError("Error reading JSON data with user requests to database. Route->to field is crippled.");
+        }
+
+        return GenerateRouteNode(id, from_stop, to_stop);
+    }
+
     std::string name;
     if (const auto name_i = request_fields.find("name"s); name_i != request_fields.end() && name_i->second.IsString()) {
         name = name_i->second.AsString();
@@ -412,6 +433,88 @@ RendererSettings JsonReader::GetRendererSetting() const {
     }
 
     return settings;
+}
+
+transport_catalogue::RoutingSettings JsonReader::GetRoutingSettings() const {
+    const auto& root_node = root_.back().GetRoot();
+    if (!root_node.IsDict()) {
+        throw json::ParsingError("Error reading JSON data with routing settings.");
+    }
+
+    const json::Dict& root_dict = root_node.AsDict();
+    auto iter = root_dict.find(ROUTING_SETTINGS);
+    if (iter == root_dict.end() || !(iter->second.IsDict()) ) {
+        throw json::ParsingError("Error reading JSON data with routing settings..");
+    }
+
+    transport_catalogue::RoutingSettings settings {};
+    const json::Dict& routing_settings = iter->second.AsDict();
+    if (const auto& bus_wait = routing_settings.find("bus_wait_time"); bus_wait != routing_settings.end() && bus_wait->second.IsInt()) {
+        settings.bus_wait_time = bus_wait->second.AsInt();
+    } else {
+        throw json::ParsingError("Error while parsing routing settings, bus wait time data.");
+    }
+
+    if (const auto& bus_velocity = routing_settings.find("bus_velocity"); bus_velocity != routing_settings.end() && bus_velocity->second.IsDouble()) {
+        settings.bus_velocity = bus_velocity->second.AsDouble();
+    } else {
+        throw json::ParsingError("Error while parsing routing settings, bus velocity data.");
+    }
+
+    return settings;
+}
+
+json::Node JsonReader::GenerateRouteNode(int id, std::string_view from, std::string_view to) const {
+    const auto& [found_from, from_stop] = transport_catalogue_.FindStop(from);
+    const auto& [found_to, to_stop] = transport_catalogue_.FindStop(to);
+    if (!found_from || !found_to) {
+        throw json::ParsingError("Error while parsing routing request, stops not found.");
+    }
+    graph::VertexId from_id = graph_ptr_->GetStopVertexId(from);
+    graph::VertexId to_id = graph_ptr_->GetStopVertexId(to);
+
+    auto route = router_ptr_->BuildRoute(from_id, to_id);
+    if (!route) {
+        return GetErrorNode(id);
+    }
+
+    json::Builder builder;
+    builder.StartDict().Key("request_id"s).Value(id).Key("total_time"s).Value(route->weight).Key("items"s).StartArray();
+
+    double time = 0.0;
+    int bus_count = 0;
+    json::Builder bus_builder;
+    bus_builder.StartDict().Key("type"s).Value("Bus"s);
+    for (const auto& edge_id : route->edges) {
+        const graph::Edge<double>& edge = graph_ptr_->GetEdge(edge_id);
+
+        const auto& stop_from = graph_ptr_->GetStopById(edge.from);
+        const auto& stop_to = graph_ptr_->GetStopById(edge.to);
+
+        if (stop_from.stop_name == stop_to.stop_name && stop_from.bus_name.empty()) {
+            json::Builder wait_builder;
+            wait_builder.StartDict().Key("type"s).Value("Wait"s)
+            .Key("stop_name"s).Value(std::string{stop_from.stop_name})
+            .Key("time"s).Value(edge.weight).EndDict();
+            builder.Value(std::move(wait_builder.Build()));
+            continue;
+        }
+
+        time += edge.weight; // add the bus travel time between 2 stops
+        ++bus_count; // increment number of stops traveled
+
+        if (stop_to.bus_name.empty()) { // got off the bus, came to the waiting vertex
+            bus_builder.Key("bus"s).Value(std::string{stop_from.bus_name}).Key("span_count"s).Value(bus_count).Key("time"s).Value(time).EndDict();
+            builder.Value(std::move(bus_builder.Build()));
+            bus_builder = {};
+            bus_builder.StartDict().Key("type"s).Value("Bus"s);
+            time = 0.0;
+            bus_count = 0;
+        }
+    }
+    builder.EndArray().EndDict();
+
+    return builder.Build();
 }
 
 svg::Color ParseColor(const json::Node& node){

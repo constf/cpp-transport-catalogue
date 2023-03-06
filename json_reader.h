@@ -4,11 +4,14 @@
 #include "transport_catalogue.h"
 #include "map_renderer.h"
 #include "domain.h"
+#include "router.h"
 #include <vector>
 
 const std::string BASE_DATA = "base_requests";
 const std::string USER_REQUESTS = "stat_requests";
 const std::string RENDER_SETTINGS = "render_settings";
+const std::string ROUTING_SETTINGS = "routing_settings";
+
 
 struct BusRouteJson {
     std::string bus_name;
@@ -33,6 +36,8 @@ public:
     size_t ReadJsonQueryTcWriteJsonToStream(std::istream & input, std::ostream& out);
 
     [[nodiscard]] RendererSettings GetRendererSetting() const;
+    transport_catalogue::RoutingSettings GetRoutingSettings() const;
+
 
 
 private:
@@ -40,6 +45,9 @@ private:
     std::vector<json::Document> root_;
     std::vector<transport_catalogue::StopWithDistances> raw_stops_;
     std::vector<BusRouteJson> raw_buses_;
+    transport_catalogue::RoutingSettings routing_settings_;
+    std::unique_ptr<transport_catalogue::TransportCatalogueGraph> graph_ptr_;
+    std::unique_ptr<graph::Router<double>> router_ptr_;
 
     BaseRequest ParseDataNode(const json::Node& node) const;
     size_t ParseJsonToRawData();
@@ -51,6 +59,7 @@ private:
     json::Node GenerateMapNode(int id) const;
     json::Node GenerateBusNode(int id, std::string& name) const;
     json::Node GenerateStopNode(int id, std::string& name) const;
+    json::Node GenerateRouteNode(int id, std::string_view from, std::string_view to) const;
 };
 
 svg::Color ParseColor(const json::Node& node);

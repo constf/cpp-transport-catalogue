@@ -7,9 +7,6 @@ namespace json {
         using namespace std::literals;
         if ( !IsStarted() ) {
             root_ = std::move(val);
-            //started_ = true;
-            //finished_ = true;
-
             return *this;
         }
 

@@ -3,4 +3,4 @@ project(cpp_transport_catalogue)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(transport_catalogue main.cpp geo.h transport_catalogue.cpp transport_catalogue.h domain.h domain.cpp geo.cpp json.cpp json.h json_reader.cpp json_reader.h request_handler.cpp request_handler.h svg.cpp svg.h map_renderer.cpp map_renderer.h json_builder.cpp json_builder.h)
+add_executable(transport_catalogue main.cpp geo.h transport_catalogue.cpp transport_catalogue.h domain.h domain.cpp geo.cpp json.cpp json.h json_reader.cpp json_reader.h request_handler.cpp request_handler.h svg.cpp svg.h map_renderer.cpp map_renderer.h json_builder.cpp json_builder.h graph.h ranges.h router.h)
