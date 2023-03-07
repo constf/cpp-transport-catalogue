@@ -3,9 +3,9 @@
 
 TransportCatalogueGraph::TransportCatalogueGraph(const transport_catalogue::TransportCatalogue& tc, RoutingSettings rs):
         graph::DirectedWeightedGraph<double>(tc.RawStopsIndex().size() + tc.GetNumberOfStopsOnAllRoutes()), tc_(tc), rs_(rs) {
-    // Get all bus routes
-    const auto& routes_index = tc_.GetAllRoutesIndex();
-    const auto& just_all_stops = tc_.RawStopsIndex();
+
+    const auto& routes_index = tc_.GetAllRoutesIndex(); // Get all bus routes for all stops on routes
+    const auto& just_all_stops = tc_.RawStopsIndex(); //  For all stops, to find those that do not belong to any route
 
     // iterate for all routes
     for (const auto& [bus, bus_route] : routes_index) {
@@ -22,6 +22,7 @@ TransportCatalogueGraph::TransportCatalogueGraph(const transport_catalogue::Tran
             if (second == bus_route->route_stops.end()) { // last stop, make connection from stop to stop on the bus route
                 if (bus_route->type == transport_catalogue::RouteType::RETURN_ROUTE) {
                     AddEdge({RegisterStop(stop_from), RegisterStop(stop_bus_from), static_cast<double>(rs_.bus_wait_time)});
+                    AddEdge({RegisterStop(stop_bus_from), RegisterStop(stop_from), 0.0});
                 }
                 break;
             }
@@ -30,24 +31,28 @@ TransportCatalogueGraph::TransportCatalogueGraph(const transport_catalogue::Tran
             StopOnRoute stop_to {0, (*second)->stop_name, {}}; // stop name, for any bus route
             StopOnRoute stop_bus_to {stop_count, (*second)->stop_name, bus}; // stop name for current bus route
 
-            // Register Edges
+            // distance and time data between stops
             int distance = tc_.GetDistanceBetweenStops((*first)->stop_name, (*second)->stop_name);
             double time_between_stops = CalculateTimeForDistance(distance); // travel time between 2 stops
+
+            // for both route types add get-on and get-off edges
             AddEdge({RegisterStop(stop_from), RegisterStop(stop_bus_from), static_cast<double>(rs_.bus_wait_time)});
-            AddEdge({RegisterStop(stop_bus_from), RegisterStop(stop_to), time_between_stops});
-            // if it is a circle route and it is not the last stop
-            if (bus_route->type == transport_catalogue::RouteType::RETURN_ROUTE || std::next(second) != bus_route->route_stops.end()) {
-                // AddEdge({RegisterStop(stop_to), RegisterStop(stop_bus_to), static_cast<double>(rs_.bus_wait_time)});
+            AddEdge({RegisterStop(stop_bus_from), RegisterStop(stop_from), 0.0});
+
+            if (bus_route->type == transport_catalogue::RouteType::RETURN_ROUTE) {
+                int distance_back = tc_.GetDistanceBetweenStops((*second)->stop_name, (*first)->stop_name);
+                double time_back = CalculateTimeForDistance(distance_back); // travel time between 2 stops
                 AddEdge({RegisterStop(stop_bus_from), RegisterStop(stop_bus_to), time_between_stops});
+                AddEdge({RegisterStop(stop_bus_to), RegisterStop(stop_bus_from), time_back});
+            } else {
+                if (std::next(second) != bus_route->route_stops.end()) {
+                    // normal 2 stops on circle route
+                    AddEdge({RegisterStop(stop_bus_from), RegisterStop(stop_bus_to), time_between_stops});
+                } else {
+                    // arrived at last station before the next circle, connect with waiting stop
+                    AddEdge({RegisterStop(stop_bus_from), RegisterStop(stop_to), time_between_stops});
+                }
             }
-
-            if (bus_route->type == transport_catalogue::RouteType::CIRCLE_ROUTE) continue;
-
-            // Register opposite direction for return route
-            distance = tc_.GetDistanceBetweenStops((*second)->stop_name, (*first)->stop_name);
-            time_between_stops = CalculateTimeForDistance(distance); // travel time between 2 stops
-            AddEdge({RegisterStop(stop_bus_to), RegisterStop(stop_from), time_between_stops});
-            AddEdge({RegisterStop(stop_bus_to), RegisterStop(stop_bus_from), time_between_stops});
         }
     }
 

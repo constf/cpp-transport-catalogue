@@ -501,17 +501,24 @@ json::Node JsonReader::GenerateRouteNode(int id, std::string_view from, std::str
             continue;
         }
 
-        time += edge.weight; // add the bus travel time between 2 stops
-        ++bus_count; // increment number of stops traveled
-
         if (stop_to.bus_name.empty()) { // got off the bus, came to the waiting vertex
+            if (stop_from.stop_name != stop_to.stop_name) {// check if we are on circle route, and it is the final circle stop
+                time += edge.weight; // add the bus travel time between 2 stops
+                ++bus_count; // increment number of stops traveled
+            }
+
             bus_builder.Key("bus"s).Value(std::string{stop_from.bus_name}).Key("span_count"s).Value(bus_count).Key("time"s).Value(time).EndDict();
             builder.Value(std::move(bus_builder.Build()));
             bus_builder = {};
             bus_builder.StartDict().Key("type"s).Value("Bus"s);
             time = 0.0;
             bus_count = 0;
+            continue;
         }
+
+        time += edge.weight; // add the bus travel time between 2 stops
+        ++bus_count; // increment number of stops traveled
+
     }
     builder.EndArray().EndDict();
 
