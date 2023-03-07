@@ -5,6 +5,7 @@
 #include "map_renderer.h"
 #include "domain.h"
 #include "router.h"
+#include "transport_router.h"
 #include <vector>
 
 const std::string BASE_DATA = "base_requests";
@@ -36,7 +37,7 @@ public:
     size_t ReadJsonQueryTcWriteJsonToStream(std::istream & input, std::ostream& out);
 
     [[nodiscard]] RendererSettings GetRendererSetting() const;
-    transport_catalogue::RoutingSettings GetRoutingSettings() const;
+    RoutingSettings GetRoutingSettings() const;
 
 
 
@@ -45,8 +46,8 @@ private:
     std::vector<json::Document> root_;
     std::vector<transport_catalogue::StopWithDistances> raw_stops_;
     std::vector<BusRouteJson> raw_buses_;
-    transport_catalogue::RoutingSettings routing_settings_;
-    std::unique_ptr<transport_catalogue::TransportCatalogueGraph> graph_ptr_;
+    RoutingSettings routing_settings_;
+    std::unique_ptr<TransportCatalogueGraph> graph_ptr_;
     std::unique_ptr<graph::Router<double>> router_ptr_;
 
     BaseRequest ParseDataNode(const json::Node& node) const;

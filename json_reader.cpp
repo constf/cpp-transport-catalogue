@@ -2,6 +2,7 @@
 #include "json_builder.h"
 
 
+
 using namespace std::literals;
 
 size_t JsonReader::ReadJson(std::istream &input) {
@@ -29,7 +30,7 @@ size_t JsonReader::ReadJsonToTransportCatalogue(std::istream &input) {
     FillTransportCatalogue();
 
     routing_settings_ = GetRoutingSettings();
-    graph_ptr_ = std::make_unique<transport_catalogue::TransportCatalogueGraph>(transport_catalogue_, routing_settings_);
+    graph_ptr_ = std::make_unique<TransportCatalogueGraph>(transport_catalogue_, routing_settings_);
     router_ptr_ = std::make_unique<graph::Router<double>>(*graph_ptr_);
 
 
@@ -435,7 +436,7 @@ RendererSettings JsonReader::GetRendererSetting() const {
     return settings;
 }
 
-transport_catalogue::RoutingSettings JsonReader::GetRoutingSettings() const {
+RoutingSettings JsonReader::GetRoutingSettings() const {
     const auto& root_node = root_.back().GetRoot();
     if (!root_node.IsDict()) {
         throw json::ParsingError("Error reading JSON data with routing settings.");
@@ -447,7 +448,7 @@ transport_catalogue::RoutingSettings JsonReader::GetRoutingSettings() const {
         throw json::ParsingError("Error reading JSON data with routing settings..");
     }
 
-    transport_catalogue::RoutingSettings settings {};
+    RoutingSettings settings {};
     const json::Dict& routing_settings = iter->second.AsDict();
     if (const auto& bus_wait = routing_settings.find("bus_wait_time"); bus_wait != routing_settings.end() && bus_wait->second.IsInt()) {
         settings.bus_wait_time = bus_wait->second.AsInt();
@@ -470,8 +471,8 @@ json::Node JsonReader::GenerateRouteNode(int id, std::string_view from, std::str
     if (!found_from || !found_to) {
         throw json::ParsingError("Error while parsing routing request, stops not found.");
     }
-    graph::VertexId from_id = graph_ptr_->GetStopVertexId(from);
-    graph::VertexId to_id = graph_ptr_->GetStopVertexId(to);
+    graph::VertexId from_id = graph_ptr_->GetStopVertexId(from, "from"s);
+    graph::VertexId to_id = graph_ptr_->GetStopVertexId(to, "to"s);
 
     auto route = router_ptr_->BuildRoute(from_id, to_id);
     if (!route) {
