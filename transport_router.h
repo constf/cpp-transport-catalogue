@@ -9,20 +9,22 @@ struct RoutingSettings {
 
 struct TwoStopsLink {
     std::string_view bus_name = {};
-    std::string_view stop_from = {};
-    std::string_view stop_to = {};
-    size_t number_of_stops = 0;
+    graph::VertexId stop_from = {};
+    graph::VertexId stop_to = {};
+    size_t number_of_stops = {};
 
-    explicit TwoStopsLink(std::string_view bus, std::string_view from, std::string_view to, size_t num) :
-            bus_name(bus), stop_from(from), stop_to(to), number_of_stops(num){
+    explicit TwoStopsLink(std::string_view bus, graph::VertexId from, graph::VertexId to, size_t num) :
+            bus_name(bus), stop_from(from), stop_to(to), number_of_stops(num) {
     }
     TwoStopsLink() = default;
 
     size_t operator()(const TwoStopsLink& sor) const {
-        return hasher_num_(number_of_stops) + 43 * hasher_(sor.stop_from) + 43 * 43 * hasher_(sor.stop_to) + 43 * 43 * 43 * hasher_(bus_name);
+        return hasher_num_(number_of_stops) + 43 * hasher_num_(sor.stop_from) +
+            43 * 43 * hasher_num_(sor.stop_to) + 43 * 43 * 43 * hasher_(bus_name);
     }
     bool operator()(const TwoStopsLink& lhs, const TwoStopsLink& rhs) const {
-        return lhs.stop_from == rhs.stop_from && lhs.stop_to == rhs.stop_to && lhs.number_of_stops == rhs.number_of_stops;
+        return lhs.bus_name == rhs.bus_name && lhs.stop_from == rhs.stop_from
+                && lhs.stop_to == rhs.stop_to && lhs.number_of_stops == rhs.number_of_stops;
     }
 
 private:
@@ -56,13 +58,15 @@ public:
 public:
     TransportCatalogueGraph(const transport_catalogue::TransportCatalogue& tc, RoutingSettings rs);
     ~TransportCatalogueGraph() = default;
-    graph::VertexId GetStopVertexId(std::string_view stop_name, const std::string& dir) const;
+    graph::VertexId GetStopVertexId(std::string_view stop_name) const;
     const StopOnRoute& GetStopById(graph::VertexId id) const;
     const TwoStopsLink& GetLinkById(graph::EdgeId id) const;
+    double GetBusWaitingTime() const;
 
 private:
     const transport_catalogue::TransportCatalogue& tc_;
     RoutingSettings rs_;
+    graph::EdgeId edge_count_ = 0;
 
     std::unordered_map<StopOnRoute, graph::VertexId , StopOnRoute, StopOnRoute> stop_to_vertex_;
     std::unordered_map<size_t , StopOnRoute> vertex_to_stop_;
@@ -74,6 +78,9 @@ private:
     graph::VertexId RegisterStop(const StopOnRoute& stop);
     graph::EdgeId StoreLink(const TwoStopsLink& link, graph::EdgeId edge);
     std::optional<graph::EdgeId> CheckLink(const TwoStopsLink& link) const;
+
+    void AddStopsOfReturnRoute(const transport_catalogue::BusRoute* bus_route);
+    void AddStopsOfCircleRoute(const transport_catalogue::BusRoute* bus_route);
 
     double CalculateTimeForDistance(int distance) const;
 };

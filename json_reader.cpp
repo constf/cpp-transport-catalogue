@@ -471,8 +471,8 @@ json::Node JsonReader::GenerateRouteNode(int id, std::string_view from, std::str
     if (!found_from || !found_to) {
         throw json::ParsingError("Error while parsing routing request, stops not found.");
     }
-    graph::VertexId from_id = graph_ptr_->GetStopVertexId(from, "from"s);
-    graph::VertexId to_id = graph_ptr_->GetStopVertexId(to, "to"s);
+    graph::VertexId from_id = graph_ptr_->GetStopVertexId(from);
+    graph::VertexId to_id = graph_ptr_->GetStopVertexId(to);
 
     auto route = router_ptr_->BuildRoute(from_id, to_id);
     if (!route) {
@@ -482,43 +482,29 @@ json::Node JsonReader::GenerateRouteNode(int id, std::string_view from, std::str
     json::Builder builder;
     builder.StartDict().Key("request_id"s).Value(id).Key("total_time"s).Value(route->weight).Key("items"s).StartArray();
 
-    double time = 0.0;
-    int bus_count = 0;
-    json::Builder bus_builder;
-    bus_builder.StartDict().Key("type"s).Value("Bus"s);
+
+    double waiting_time = graph_ptr_->GetBusWaitingTime();
+    // int bus_count = 0;
+
     for (const auto& edge_id : route->edges) {
         const graph::Edge<double>& edge = graph_ptr_->GetEdge(edge_id);
 
+        auto link = graph_ptr_->GetLinkById(edge_id);
         const auto& stop_from = graph_ptr_->GetStopById(edge.from);
-        const auto& stop_to = graph_ptr_->GetStopById(edge.to);
+        //const auto& stop_to = graph_ptr_->GetStopById(edge.to);
 
-        if (stop_from.stop_name == stop_to.stop_name && stop_from.bus_name.empty()) {
-            json::Builder wait_builder;
-            wait_builder.StartDict().Key("type"s).Value("Wait"s)
-            .Key("stop_name"s).Value(std::string{stop_from.stop_name})
-            .Key("time"s).Value(edge.weight).EndDict();
-            builder.Value(std::move(wait_builder.Build()));
-            continue;
-        }
+        json::Builder wait_builder;
+        wait_builder.StartDict().Key("type"s).Value("Wait"s)
+        .Key("stop_name"s).Value(std::string{stop_from.stop_name})
+        .Key("time"s).Value(waiting_time).EndDict();
+        builder.Value(std::move(wait_builder.Build()));
 
-        if (stop_to.bus_name.empty()) { // got off the bus, came to the waiting vertex
-            if (stop_from.stop_name != stop_to.stop_name) {// check if we are on circle route, and it is the final circle stop
-                time += edge.weight; // add the bus travel time between 2 stops
-                ++bus_count; // increment number of stops traveled
-            }
 
-            bus_builder.Key("bus"s).Value(std::string{stop_from.bus_name}).Key("span_count"s).Value(bus_count).Key("time"s).Value(time).EndDict();
-            builder.Value(std::move(bus_builder.Build()));
-            bus_builder = {};
-            bus_builder.StartDict().Key("type"s).Value("Bus"s);
-            time = 0.0;
-            bus_count = 0;
-            continue;
-        }
-
-        time += edge.weight; // add the bus travel time between 2 stops
-        ++bus_count; // increment number of stops traveled
-
+        json::Builder bus_builder;
+        double time = edge.weight - waiting_time;
+        bus_builder.StartDict().Key("type"s).Value("Bus"s).Key("bus"s).Value(std::string{link.bus_name})
+                .Key("span_count"s).Value(static_cast<int>(link.number_of_stops)).Key("time"s).Value(time).EndDict();
+        builder.Value(std::move(bus_builder.Build()));
     }
     builder.EndArray().EndDict();
 
