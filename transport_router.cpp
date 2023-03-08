@@ -6,7 +6,6 @@ TransportCatalogueGraph::TransportCatalogueGraph(const transport_catalogue::Tran
 
     const auto& routes_index = tc_.GetAllRoutesIndex(); // Get all bus routes for all stops on routes
     const auto& just_all_stops = tc_.RawStopsIndex(); //  For all stops, to find those that do not belong to any route
-
     // iterate for all routes
     for (const auto& [bus, bus_route] : routes_index) {
         // iterate all stops in a route
@@ -80,6 +79,28 @@ graph::VertexId TransportCatalogueGraph::RegisterStop(const StopOnRoute& stop) {
     return result;
 }
 
+std::optional<graph::EdgeId> TransportCatalogueGraph::CheckLink(const TwoStopsLink &link) const {
+    auto iter = stoplink_to_edge_.find(link);
+
+    if (iter != stoplink_to_edge_.end()) {
+        return iter->second; // return the stop vertex number, it already exists in the map
+    }
+
+    return {};
+}
+
+graph::EdgeId TransportCatalogueGraph::StoreLink(const TwoStopsLink &link, graph::EdgeId edge) {
+    auto iter = stoplink_to_edge_.find(link);
+    if (iter != stoplink_to_edge_.end()) {
+        return iter->second;
+    }
+
+    stoplink_to_edge_[link] = edge;
+    edge_to_stoplink_[edge] = link;
+
+    return edge;
+}
+
 double TransportCatalogueGraph::CalculateTimeForDistance(int distance) const {
     return static_cast<double>(distance) / (rs_.bus_velocity * transport_catalogue::MET_MIN_RATIO);
 }
@@ -98,3 +119,5 @@ graph::VertexId TransportCatalogueGraph::GetStopVertexId(std::string_view stop_n
 const TransportCatalogueGraph::StopOnRoute& TransportCatalogueGraph::GetStopById(graph::VertexId id) const {
     return vertex_to_stop_.at(id);
 }
+
+
