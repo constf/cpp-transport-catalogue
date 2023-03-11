@@ -47,8 +47,7 @@ private:
     std::vector<transport_catalogue::StopWithDistances> raw_stops_;
     std::vector<BusRouteJson> raw_buses_;
     RoutingSettings routing_settings_;
-    std::unique_ptr<TransportCatalogueGraph> graph_ptr_;
-    std::unique_ptr<graph::Router<double>> router_ptr_;
+    std::unique_ptr<TransportCatalogueRouterGraph> graph_ptr_;
 
     BaseRequest ParseDataNode(const json::Node& node) const;
     size_t ParseJsonToRawData();

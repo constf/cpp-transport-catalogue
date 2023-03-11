@@ -30,9 +30,7 @@ size_t JsonReader::ReadJsonToTransportCatalogue(std::istream &input) {
     FillTransportCatalogue();
 
     routing_settings_ = GetRoutingSettings();
-    graph_ptr_ = std::make_unique<TransportCatalogueGraph>(transport_catalogue_, routing_settings_);
-    router_ptr_ = std::make_unique<graph::Router<double>>(*graph_ptr_);
-
+    graph_ptr_ = std::make_unique<TransportCatalogueRouterGraph>(transport_catalogue_, routing_settings_);
 
     return result;
 }
@@ -471,10 +469,8 @@ json::Node JsonReader::GenerateRouteNode(int id, std::string_view from, std::str
     if (!found_from || !found_to) {
         throw json::ParsingError("Error while parsing routing request, stops not found.");
     }
-    graph::VertexId from_id = graph_ptr_->GetStopVertexId(from);
-    graph::VertexId to_id = graph_ptr_->GetStopVertexId(to);
 
-    auto route = router_ptr_->BuildRoute(from_id, to_id);
+    auto route = graph_ptr_->BuildRoute(from, to);
     if (!route) {
         return GetErrorNode(id);
     }

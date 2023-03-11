@@ -1,7 +1,7 @@
 #include "transport_router.h"
 
 
-TransportCatalogueGraph::TransportCatalogueGraph(const transport_catalogue::TransportCatalogue& tc, RoutingSettings rs):
+TransportCatalogueRouterGraph::TransportCatalogueRouterGraph(const transport_catalogue::TransportCatalogue& tc, RoutingSettings rs):
         graph::DirectedWeightedGraph<double>(tc.RawStopsIndex().size()), tc_(tc), rs_(rs) {
 
     const auto& routes_index = tc_.GetAllRoutesIndex(); // Get all bus routes for all stops on routes
@@ -15,14 +15,16 @@ TransportCatalogueGraph::TransportCatalogueGraph(const transport_catalogue::Tran
     // iterate for all routes
     for (const auto& [_, bus_route] : routes_index) {
         if (bus_route->type == transport_catalogue::RouteType::RETURN_ROUTE) {
-            AddStopsOfReturnRoute(bus_route);
+            FillWithReturnRouteStops(bus_route);
         } else {
-            AddStopsOfCircleRoute(bus_route);
+            FillWithCircleRouteStops(bus_route);
         }
     }
+
+    router_ptr_ = std::make_unique<graph::Router<double>>(*this);
 }
 
-void TransportCatalogueGraph::AddStopsOfReturnRoute(const transport_catalogue::BusRoute *bus_route) {
+void TransportCatalogueRouterGraph::FillWithReturnRouteStops(const transport_catalogue::BusRoute *bus_route) {
     // iterate all stops in a route
     for (auto start = bus_route->route_stops.begin(); start != bus_route->route_stops.end(); ++start) {
         size_t stop_distance = 1; // count between stops
@@ -36,6 +38,14 @@ void TransportCatalogueGraph::AddStopsOfReturnRoute(const transport_catalogue::B
             auto to_id = GetStopVertexId((*second)->stop_name);
 
             // make direct link and register Edge
+            // Думал об этом, чтобы вынести этот кусок кода в отдельный метод, но представляется, что
+            // лучше оставить так: какая причина?
+            // в такой метод нужно передать слишком много информации на 3 строки кода: 2 идентификатора остановок, номер автобуса,
+            // число остановок между переданными идентификаторами, накопленное расстояние,
+            // что несколько затрудняет восприятие этого кода
+            // к тому же, всё равно придётся оставить accumulated_distance_direct += direct_distance; и вдобавок
+            // как-то получать из метода расстояние между этими 2 соседними остановками, что вообще не ведёт к упрощению кода.
+            // так что, хотел бы оставить так!
             TwoStopsLink direct_link(bus_route->bus_name, from_id, to_id, stop_distance);
             const int direct_distance = tc_.GetDistanceBetweenStops((*first)->stop_name, (*second)->stop_name);
             accumulated_distance_direct += direct_distance;
@@ -58,7 +68,7 @@ void TransportCatalogueGraph::AddStopsOfReturnRoute(const transport_catalogue::B
     }
 }
 
-void TransportCatalogueGraph::AddStopsOfCircleRoute(const transport_catalogue::BusRoute *bus_route) {
+void TransportCatalogueRouterGraph::FillWithCircleRouteStops(const transport_catalogue::BusRoute *bus_route) {
     // iterate all stops in a route
     for (auto start = bus_route->route_stops.begin(); start != bus_route->route_stops.end(); ++start) {
         size_t stop_distance = 1; // count between stops
@@ -87,7 +97,7 @@ void TransportCatalogueGraph::AddStopsOfCircleRoute(const transport_catalogue::B
 
 
 
-graph::VertexId TransportCatalogueGraph::RegisterStop(const StopOnRoute& stop) {
+graph::VertexId TransportCatalogueRouterGraph::RegisterStop(const StopOnRoute& stop) {
     auto iter = stop_to_vertex_.find(stop);
     if (iter != stop_to_vertex_.end()) {
         return iter->second; // return the stop vertex number, it already exists in the map
@@ -102,7 +112,7 @@ graph::VertexId TransportCatalogueGraph::RegisterStop(const StopOnRoute& stop) {
     return result;
 }
 
-std::optional<graph::EdgeId> TransportCatalogueGraph::CheckLink(const TwoStopsLink &link) const {
+std::optional<graph::EdgeId> TransportCatalogueRouterGraph::CheckLink(const TwoStopsLink &link) const {
     auto iter = stoplink_to_edge_.find(link);
 
     if (iter != stoplink_to_edge_.end()) {
@@ -112,7 +122,7 @@ std::optional<graph::EdgeId> TransportCatalogueGraph::CheckLink(const TwoStopsLi
     return {};
 }
 
-graph::EdgeId TransportCatalogueGraph::StoreLink(const TwoStopsLink &link, graph::EdgeId edge) {
+graph::EdgeId TransportCatalogueRouterGraph::StoreLink(const TwoStopsLink &link, graph::EdgeId edge) {
     auto iter  = edge_to_stoplink_.find(edge);
     if (iter != edge_to_stoplink_.end()) {
         return iter->first;
@@ -124,11 +134,11 @@ graph::EdgeId TransportCatalogueGraph::StoreLink(const TwoStopsLink &link, graph
     return edge;
 }
 
-double TransportCatalogueGraph::CalculateTimeForDistance(int distance) const {
+double TransportCatalogueRouterGraph::CalculateTimeForDistance(int distance) const {
     return static_cast<double>(distance) / (rs_.bus_velocity * transport_catalogue::MET_MIN_RATIO);
 }
 
-graph::VertexId TransportCatalogueGraph::GetStopVertexId(std::string_view stop_name) const {
+graph::VertexId TransportCatalogueRouterGraph::GetStopVertexId(std::string_view stop_name) const {
     StopOnRoute stop{0, stop_name, {}};
     auto iter = stop_to_vertex_.find(stop);
 
@@ -139,15 +149,15 @@ graph::VertexId TransportCatalogueGraph::GetStopVertexId(std::string_view stop_n
     throw std::logic_error("Error, no stop name: " + std::string (stop_name));
 }
 
-const TransportCatalogueGraph::StopOnRoute& TransportCatalogueGraph::GetStopById(graph::VertexId id) const {
+const TransportCatalogueRouterGraph::StopOnRoute& TransportCatalogueRouterGraph::GetStopById(graph::VertexId id) const {
     return vertex_to_stop_.at(id);
 }
 
-double TransportCatalogueGraph::GetBusWaitingTime() const {
+double TransportCatalogueRouterGraph::GetBusWaitingTime() const {
     return static_cast<double>(rs_.bus_wait_time);
 }
 
-const TwoStopsLink& TransportCatalogueGraph::GetLinkById(graph::EdgeId id) const {
+const TwoStopsLink& TransportCatalogueRouterGraph::GetLinkById(graph::EdgeId id) const {
     auto iter = edge_to_stoplink_.find(id);
 
     if (iter != edge_to_stoplink_.end()) {
@@ -155,4 +165,13 @@ const TwoStopsLink& TransportCatalogueGraph::GetLinkById(graph::EdgeId id) const
     }
 
     throw std::logic_error("Error fetching the TwoStopsLink, no Edge id: " + std::to_string(id));
+}
+
+std::optional<graph::Router<double>::RouteInfo> TransportCatalogueRouterGraph::BuildRoute(std::string_view from, std::string_view to) const {
+    if (!router_ptr_) return {};
+
+    graph::VertexId from_id = GetStopVertexId(from);
+    graph::VertexId to_id = GetStopVertexId(to);
+
+    return router_ptr_->BuildRoute(from_id, to_id);
 }

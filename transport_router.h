@@ -1,5 +1,7 @@
 #pragma once
 #include "transport_catalogue.h"
+#include "router.h"
+#include <memory>
 
 
 struct RoutingSettings {
@@ -33,7 +35,7 @@ private:
 };
 
 
-class TransportCatalogueGraph : public graph::DirectedWeightedGraph<double> {
+class TransportCatalogueRouterGraph : public graph::DirectedWeightedGraph<double> {
 public:
     struct StopOnRoute {
         size_t stop_number;
@@ -56,9 +58,10 @@ public:
     };
 
 public:
-    TransportCatalogueGraph(const transport_catalogue::TransportCatalogue& tc, RoutingSettings rs);
-    ~TransportCatalogueGraph() = default;
-    graph::VertexId GetStopVertexId(std::string_view stop_name) const;
+    TransportCatalogueRouterGraph(const transport_catalogue::TransportCatalogue& tc, RoutingSettings rs);
+    ~TransportCatalogueRouterGraph() = default;
+    std::optional<graph::Router<double>::RouteInfo> BuildRoute(std::string_view from, std::string_view to) const;
+
     const StopOnRoute& GetStopById(graph::VertexId id) const;
     const TwoStopsLink& GetLinkById(graph::EdgeId id) const;
     double GetBusWaitingTime() const;
@@ -67,6 +70,7 @@ private:
     const transport_catalogue::TransportCatalogue& tc_;
     RoutingSettings rs_;
     graph::EdgeId edge_count_ = 0;
+    std::unique_ptr<graph::Router<double>> router_ptr_;
 
     std::unordered_map<StopOnRoute, graph::VertexId , StopOnRoute, StopOnRoute> stop_to_vertex_;
     std::unordered_map<size_t , StopOnRoute> vertex_to_stop_;
@@ -78,9 +82,10 @@ private:
     graph::VertexId RegisterStop(const StopOnRoute& stop);
     graph::EdgeId StoreLink(const TwoStopsLink& link, graph::EdgeId edge);
     std::optional<graph::EdgeId> CheckLink(const TwoStopsLink& link) const;
+    graph::VertexId GetStopVertexId(std::string_view stop_name) const;
 
-    void AddStopsOfReturnRoute(const transport_catalogue::BusRoute* bus_route);
-    void AddStopsOfCircleRoute(const transport_catalogue::BusRoute* bus_route);
+    void FillWithReturnRouteStops(const transport_catalogue::BusRoute* bus_route);
+    void FillWithCircleRouteStops(const transport_catalogue::BusRoute* bus_route);
 
     double CalculateTimeForDistance(int distance) const;
 };
