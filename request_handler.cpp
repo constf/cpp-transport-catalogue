@@ -20,5 +20,12 @@ void RequestHandler::RenderMap(svg::Document& svg_doc) const {
     mr.RenderSvgMap(db_, svg_doc);
 }
 
+std::optional<graph::Router<double>::RouteInfo>
+RequestHandler::GenerateRoute(std::string_view from_stop, std::string_view to_stop) const {
+    return json_reader_.GenerateRoute(from_stop, to_stop);
+}
+
+
+
 
 

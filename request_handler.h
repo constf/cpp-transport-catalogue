@@ -3,6 +3,7 @@
 #include "transport_catalogue.h"
 #include "map_renderer.h"
 #include "json_reader.h"
+#include "router.h"
 #include "svg.h"
 #include <set>
 #include <string_view>
@@ -17,6 +18,7 @@ public:
 
     std::optional<BusInfo> GetBusStat(const std::string_view& bus_name) const;
     const std::set<std::string_view>& GetBusesByStop(const std::string_view& stop_name) const;
+    std::optional<graph::Router<double>::RouteInfo> GenerateRoute(std::string_view from_stop, std::string_view to_stop) const;
     void RenderMap(svg::Document& svg_map) const;
 
 private:

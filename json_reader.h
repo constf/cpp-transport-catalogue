@@ -35,7 +35,7 @@ public:
     size_t QueryTcWriteJsonToStream(std::ostream& out);
 
     size_t ReadJsonQueryTcWriteJsonToStream(std::istream & input, std::ostream& out);
-
+    std::optional<graph::Router<double>::RouteInfo> GenerateRoute(std::string_view from_stop, std::string_view to_stop) const;
     [[nodiscard]] RendererSettings GetRendererSetting() const;
     RoutingSettings GetRoutingSettings() const;
 

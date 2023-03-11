@@ -507,6 +507,10 @@ json::Node JsonReader::GenerateRouteNode(int id, std::string_view from, std::str
     return builder.Build();
 }
 
+std::optional<graph::Router<double>::RouteInfo> JsonReader::GenerateRoute(std::string_view from_stop, std::string_view to_stop) const {
+    return graph_ptr_->BuildRoute(from_stop, to_stop);
+}
+
 svg::Color ParseColor(const json::Node& node){
     if (node.IsString()) {
         return {node.AsString()};
