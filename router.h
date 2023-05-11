@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include "transport_catalogue.pb.h"
 
 namespace graph {
 
@@ -21,6 +22,10 @@ namespace graph {
 
     public:
         explicit Router(const Graph& graph);
+        explicit Router(const Graph& graph, const tc_serialize::TransportCatalogue& tc_pbuf);
+
+        bool SaveTo(tc_serialize::TransportCatalogue& tc_out) const;
+        bool RestoreFrom(const tc_serialize::TransportCatalogue& tc_in);
 
         struct RouteInfo {
             Weight weight;
@@ -29,12 +34,15 @@ namespace graph {
 
         std::optional<RouteInfo> BuildRoute(VertexId from, VertexId to) const;
 
-    private:
         struct RouteInternalData {
             Weight weight;
             std::optional<EdgeId> prev_edge;
         };
         using RoutesInternalData = std::vector<std::vector<std::optional<RouteInternalData>>>;
+
+    private:
+        tc_serialize::RouteIntDataPB RouteIntDataToSerialize(const std::optional<Router<Weight>::RouteInternalData> &data) const;
+        std::optional<RouteInternalData> RouteIntDataToDomain(const tc_serialize::RouteIntDataPB& data) const;
 
         void InitializeRoutesInternalData(const Graph& graph) {
             const size_t vertex_count = graph.GetVertexCount();
@@ -80,6 +88,86 @@ namespace graph {
         RoutesInternalData routes_internal_data_;
     };
 
+    template<typename Weight>
+    std::optional<typename Router<Weight>::RouteInternalData>
+    Router<Weight>::RouteIntDataToDomain(const tc_serialize::RouteIntDataPB &data) const {
+        if (data.data_empty()) {
+            return {std::nullopt};
+        }
+
+        std::optional<typename Router<Weight>::RouteInternalData> result{Router<Weight>::RouteInternalData {}};
+        if (!data.prev_edge_empty()) {
+            result->prev_edge = data.prev_edge();
+        }
+        result->weight = data.weight();
+
+        return result;
+    }
+
+
+    template<typename Weight>
+    tc_serialize::RouteIntDataPB
+    Router<Weight>::RouteIntDataToSerialize(const std::optional<Router<Weight>::RouteInternalData> &data) const {
+        tc_serialize::RouteIntDataPB result;
+        if (!data) {
+            result.set_data_empty(true);
+            return result;
+        }
+
+        result.set_data_empty(false);
+        if (data->prev_edge) {
+            result.set_prev_edge_empty(false);
+            result.set_prev_edge(data->prev_edge.value());
+        } else {
+            result.set_prev_edge_empty(true);
+        }
+        result.set_weight(data->weight);
+
+        return result;
+    }
+
+
+
+    template<typename Weight>
+    bool Router<Weight>::RestoreFrom(const tc_serialize::TransportCatalogue &tc_in) {
+        routes_internal_data_.reserve(tc_in.router_routes_int_data().routes_list_size());
+
+        for (int i = 0; i < tc_in.router_routes_int_data().routes_list_size(); ++i) {
+            const tc_serialize::VertexCountListPB& small_list = tc_in.router_routes_int_data().routes_list(i);
+            std::vector<std::optional<RouteInternalData>> out_list(small_list.vertex_list_size());
+            for (int j = 0; j < small_list.vertex_list_size(); ++j) {
+                const tc_serialize::RouteIntDataPB& data = small_list.vertex_list(j);
+                out_list[j] = RouteIntDataToDomain(data);
+            }
+            routes_internal_data_.emplace_back(std::move(out_list));
+        }
+
+        return true;
+    }
+
+    template<typename Weight>
+    bool Router<Weight>::SaveTo(tc_serialize::TransportCatalogue &tc_out) const {
+        tc_serialize::RoutesInternalDataListsPB big_list;
+
+        for (const auto& vertex_list : routes_internal_data_) {
+            tc_serialize::VertexCountListPB int_data_list;
+            for (const auto& data : vertex_list) {
+                *int_data_list.add_vertex_list() = RouteIntDataToSerialize(data);
+            }
+            *big_list.add_routes_list() = std::move(int_data_list);
+        }
+
+        *tc_out.mutable_router_routes_int_data() = std::move(big_list);
+
+        return true;
+    }
+
+    template<typename Weight>
+    Router<Weight>::Router(const Router::Graph &graph, const tc_serialize::TransportCatalogue &tc_pbuf)
+            : graph_(graph) {
+        RestoreFrom(tc_pbuf);
+    }
+
     template <typename Weight>
     Router<Weight>::Router(const Graph& graph)
             : graph_(graph)
@@ -113,5 +201,4 @@ namespace graph {
 
         return RouteInfo{weight, std::move(edges)};
     }
-
 }  // namespace graph

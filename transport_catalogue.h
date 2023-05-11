@@ -12,6 +12,8 @@
 #include "geo.h"
 #include "domain.h"
 #include "graph.h"
+#include "serialization.h"
+#include "transport_catalogue.pb.h"
 
 
 namespace transport_catalogue {
@@ -46,7 +48,7 @@ public:
     void AddStop(const Stop& stop);
     std::pair<bool, const Stop&> FindStop(const std::string_view name) const;
     bool AddBus(const BusRoute& bus_route);
-    const BusRoute& FindBus(std::string_view name);
+    const BusRoute& FindBus(std::string_view name) const;
     BusInfo GetBusInfo(std::string_view bus_name) const;
     const std::set<std::string_view>& GetBusesForStop(std::string_view stop) const;
     bool SetDistanceBetweenStops(std::string_view stop, std::string_view other_stop, int dist);
@@ -58,14 +60,22 @@ public:
     const std::unordered_map<StopsPointers, int, StopsPointers, StopsPointers>& RawDistancesIndex() const;
     const std::unordered_map<std::string_view, std::set<std::string_view>>& GetStopAndBuses() const;
 
+    void SaveTo(tc_serialize::TransportCatalogue& t_cat) const;
+    bool RestoreFrom(tc_serialize::TransportCatalogue& t_cat);
+
+    uint32_t GetStopId(const std::string_view stop_name) const;
+    const std::string_view GetStopNameById(uint32_t stop_id) const;
 private:
+    uint32_t stop_id_counter_ = 0;
+
     std::deque<Stop> stops_;
     std::unordered_map<std::string_view, const Stop*> stops_index_;
+    std::unordered_map<uint32_t, const Stop*> stop_id_name_index_;
 
     std::deque<BusRoute> bus_routes_;
     std::unordered_map<std::string_view, const BusRoute*> routes_index_;
-
     std::unordered_map<std::string_view, std::set<std::string_view>> stop_and_buses_;
+
     std::unordered_map<StopsPointers, int, StopsPointers, StopsPointers> stops_distance_index_;
 };
 

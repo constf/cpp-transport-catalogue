@@ -402,15 +402,18 @@ namespace json {
     }
 
     void Print(const Document& doc, std::ostream& output) {
-        PrintNode(doc.GetRoot(), output);
+        svg::RenderContext context(output, 4, 0);
+        PrintNode(doc.GetRoot(), context);
     }
 
-    void PrintValue(std::nullptr_t, ostream &out) {
+    void PrintValue(std::nullptr_t, svg::RenderContext context) {
+        ostream& out = context.out;
         out << "null"sv;
     }
 
 
-    void PrintValue(const string &str, ostream &out) {
+    void PrintValue(const string &str, svg::RenderContext context) {
+        std::ostream& out = context.out;
         out << "\""sv;
 
         for (char c : str) {
@@ -438,7 +441,8 @@ namespace json {
         out << "\""sv;
     }
 
-    void PrintValue(bool val, std::ostream& out) {
+    void PrintValue(bool val, svg::RenderContext context) {
+        std::ostream& out = context.out;
         if (val) {
             out << "true"sv;
         } else {
@@ -446,32 +450,42 @@ namespace json {
         }
     }
 
-    void PrintValue(const Array &arr, ostream &out) {
-        out << "["sv;
+    void PrintValue(const Array &arr, svg::RenderContext context) {
+        std::ostream& out = context.out;
+        out << "["sv << endl;
+        auto indent = context.Indented();
         for (auto iter = arr.begin(); iter != arr.end(); ++iter) {
-            PrintNode(*iter, out);
+            indent.RenderIndent();
+            PrintNode(*iter, indent);
             if (std::next(iter) != arr.end()) {
-                out << ", "sv;
+                out << ","sv;
             }
+            out << endl;
         }
+        context.RenderIndent();
         out << "]"sv;
     }
 
-    void PrintValue(const Dict &dict, ostream &out) {
-        out << "{"sv;
+    void PrintValue(const Dict &dict, svg::RenderContext context) {
+        std::ostream& out = context.out;
+        auto indent = context.Indented();
+        out << "{"sv << endl;
         for (auto iter = dict.begin(); iter != dict.end(); ++iter) {
-            out << "\""sv << iter->first << "\":"sv;
-            PrintNode(iter->second, out);
+            indent.RenderIndent();
+            out << "\""sv << iter->first << "\": "sv;
+            PrintNode(iter->second, indent);
             if (std::next(iter) != dict.end() ) {
-                out << ", "sv;
+                out << ","sv;
             }
+            out << endl;
         }
+        context.RenderIndent();
         out << "}";
     }
 
-    void PrintNode(const Node &node, ostream &out) {
-        std::visit( [&out](const auto& value){
-            PrintValue(value, out);
+    void PrintNode(const Node &node, svg::RenderContext context) {
+        std::visit( [&context](const auto& value){
+            PrintValue(value, context);
         }, node.GetValue() );
     }
 

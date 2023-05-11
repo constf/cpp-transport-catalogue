@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 #include <variant>
+#include "svg.h"
 
 namespace json {
 
@@ -69,17 +70,18 @@ namespace json {
     void Print(const Document& doc, std::ostream& output);
 
     template <typename Value>
-    void PrintValue(const Value& value, std::ostream& out) {
+    void PrintValue(const Value& value, svg::RenderContext context) {
+        std::ostream& out = context.out;
         out << value;
     }
 
-    void PrintValue(const std::string& str, std::ostream& out);
-    void PrintValue(std::nullptr_t, std::ostream& out);
-    void PrintValue( bool val, std::ostream& out);
-    void PrintValue(const Array& arr, std::ostream& out);
-    void PrintValue(const Dict& dict, std::ostream& out);
+    void PrintValue(const std::string& str, svg::RenderContext context);
+    void PrintValue(std::nullptr_t, svg::RenderContext context);
+    void PrintValue( bool val, svg::RenderContext context);
+    void PrintValue(const Array& arr, svg::RenderContext context);
+    void PrintValue(const Dict& dict, svg::RenderContext context);
 
-    void PrintNode(const Node& node, std::ostream& out);
+    void PrintNode(const Node& node, svg::RenderContext context);
 
 
 }  // namespace json

@@ -1,17 +1,22 @@
 #pragma once
 
+#include <sstream>
 #include "json.h"
 #include "transport_catalogue.h"
+#include "transport_catalogue.pb.h"
 #include "map_renderer.h"
 #include "domain.h"
 #include "router.h"
 #include "transport_router.h"
 #include <vector>
+#include "serialization.h"
+
 
 const std::string BASE_DATA = "base_requests";
 const std::string USER_REQUESTS = "stat_requests";
 const std::string RENDER_SETTINGS = "render_settings";
 const std::string ROUTING_SETTINGS = "routing_settings";
+const std::string SERIALIZE_SETTINGS = "serialization_settings";
 
 
 struct BusRouteJson {
@@ -36,17 +41,21 @@ public:
 
     size_t ReadJsonQueryTcWriteJsonToStream(std::istream & input, std::ostream& out);
     std::optional<graph::Router<double>::RouteInfo> GenerateRoute(std::string_view from_stop, std::string_view to_stop) const;
+
     [[nodiscard]] RendererSettings GetRendererSetting() const;
     RoutingSettings GetRoutingSettings() const;
+    SerializationSettings GetSerializationSettings() const;
 
-
+    void SaveTo(tc_serialize::TransportCatalogue& t_cat) const;
+    bool RestoreFrom(tc_serialize::TransportCatalogue& t_cat);
 
 private:
     transport_catalogue::TransportCatalogue& transport_catalogue_;
     std::vector<json::Document> root_;
     std::vector<transport_catalogue::StopWithDistances> raw_stops_;
     std::vector<BusRouteJson> raw_buses_;
-    RoutingSettings routing_settings_;
+    mutable std::optional<RoutingSettings> routing_settings_;
+    mutable std::optional<RendererSettings> renderer_settings_;
     std::unique_ptr<TransportCatalogueRouterGraph> graph_ptr_;
 
     BaseRequest ParseDataNode(const json::Node& node) const;

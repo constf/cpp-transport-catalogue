@@ -1,5 +1,6 @@
 #pragma once
 #include "transport_catalogue.h"
+#include "transport_catalogue.pb.h"
 #include "router.h"
 #include <memory>
 
@@ -59,7 +60,13 @@ public:
 
 public:
     TransportCatalogueRouterGraph(const transport_catalogue::TransportCatalogue& tc, RoutingSettings rs);
-    ~TransportCatalogueRouterGraph() = default;
+    TransportCatalogueRouterGraph(const transport_catalogue::TransportCatalogue& tc, RoutingSettings rs,
+                                  const tc_serialize::TransportCatalogue& tc_pbuf);
+    ~TransportCatalogueRouterGraph() override = default;
+
+    bool SaveTo(tc_serialize::TransportCatalogue& tc_out) const;
+    bool RestoreFrom(const tc_serialize::TransportCatalogue& tc_in);
+
     std::optional<graph::Router<double>::RouteInfo> BuildRoute(std::string_view from, std::string_view to) const;
 
     const StopOnRoute& GetStopById(graph::VertexId id) const;
@@ -88,4 +95,17 @@ private:
     void FillWithCircleRouteStops(const transport_catalogue::BusRoute* bus_route);
 
     double CalculateTimeForDistance(int distance) const;
+
+    // Serialization / Deserialization helper methods
+    tc_serialize::StopOnRoutePB StopOnRouteToSerialize(const StopOnRoute& stop, graph::VertexId vertexId) const;
+    StopOnRoute StopOnRouteToDomain(const tc_serialize::StopOnRoutePB& stop);
+
+    tc_serialize::TwoStopsLinkPB TwoStopsLinkToSerialize(const TwoStopsLink& link, graph::EdgeId edge) const;
+    TwoStopsLink TwoStopsLinkToDomain(const tc_serialize::TwoStopsLinkPB& link) const;
+
+    tc_serialize::EdgePB EdgeToSerialize(const graph::Edge<double>& edge) const;
+    graph::Edge<double> EdgeToDomain(const tc_serialize::EdgePB& edge) const;
+
+    tc_serialize::IncListPB IncListToSerialize(const std::vector<size_t>& list) const;
+    std::vector<size_t> IncListToDomain(const tc_serialize::IncListPB& list) const;
 };

@@ -6,7 +6,10 @@
 
 namespace transport_catalogue {
 
+    class TransportCatalogue;
+
     struct Stop {
+        uint32_t id = 0;
         std::string stop_name;
         geo::Coordinates coordinates;
     };

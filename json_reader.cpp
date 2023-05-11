@@ -30,7 +30,7 @@ size_t JsonReader::ReadJsonToTransportCatalogue(std::istream &input) {
     FillTransportCatalogue();
 
     routing_settings_ = GetRoutingSettings();
-    graph_ptr_ = std::make_unique<TransportCatalogueRouterGraph>(transport_catalogue_, routing_settings_);
+    graph_ptr_ = std::make_unique<TransportCatalogueRouterGraph>(transport_catalogue_, routing_settings_.value());
 
     return result;
 }
@@ -40,12 +40,12 @@ size_t JsonReader::ParseJsonToRawData() {
 
     const json::Node& root_node = root_.back().GetRoot();
     if (!root_node.IsDict()) {
-        throw json::ParsingError("Error reading JSON data for database filling.");
+        throw json::ParsingError("Error reading JSON data for database filling 01.");
     }
     const json::Dict& dict = root_node.AsDict();
     auto iter = dict.find(BASE_DATA);
     if (iter == dict.end() || !(iter->second.IsArray()) ) {
-        throw json::ParsingError("Error reading JSON data for database filling.");
+        throw json::ParsingError("Error reading JSON data for database filling 02.");
     }
 
     const json::Array& nodes = iter->second.AsArray();
@@ -57,7 +57,7 @@ size_t JsonReader::ParseJsonToRawData() {
         } else if (auto* bus = std::get_if<BusRouteJson>(&data) ) {
             raw_buses_.emplace_back(std::move(*bus));
         } else {
-            throw json::ParsingError("Error reading JSON data for database filling.");
+            throw json::ParsingError("Error reading JSON data for database filling 03.");
         }
         ++result;
     }
@@ -68,6 +68,7 @@ size_t JsonReader::ParseJsonToRawData() {
 BaseRequest JsonReader::ParseDataStop(const json::Dict& dict) const {
     using namespace transport_catalogue;
     StopWithDistances stop;
+    stop.id = 0;
 
     if (const auto name_i = dict.find("name"s); name_i != dict.end() && name_i->second.IsString()) {
         stop.stop_name = name_i->second.AsString();
@@ -177,7 +178,7 @@ bool JsonReader::FillTransportCatalogue() {
             continue;
         }
         transport_catalogue::BusRoute br;
-        br.bus_name = std::move(route.bus_name);
+        br.bus_name = route.bus_name; // = std::move(route.bus_name);
         br.type = route.type;
         for (auto& route_stop : route.route_stops) {
             br.route_stops.emplace_back( &(transport_catalogue_.FindStop(route_stop).second) );
@@ -213,7 +214,10 @@ size_t JsonReader::QueryTcWriteJsonToStream(std::ostream &out) {
         builder.Value(std::move(ProcessOneUserRequestNode(node)));
     }
     json::Node res_node = builder.EndArray().Build();
-    json::PrintNode(res_node, out);
+
+    svg::RenderContext context(out, 4, 0);
+    context.RenderIndent();
+    json::PrintNode(res_node, context);
 
     return res_node.AsArray().size();
 }
@@ -300,8 +304,12 @@ json::Node JsonReader::GenerateBusNode(int id, std::string& name) const {
         return GetErrorNode(id);
     }
 
+//    return json::Builder().StartDict().Key("request_id"s).Value(id).Key("curvature"s).Value(bi.curvature)
+//            .Key("route_length"s).Value(static_cast<int>(bi.route_length)).Key("stop_count"s).Value(static_cast<int>(bi.stops_number))
+//            .Key("unique_stop_count"s).Value(static_cast<int>(bi.unique_stops)).EndDict().Build();
+
     return json::Builder().StartDict().Key("request_id"s).Value(id).Key("curvature"s).Value(bi.curvature)
-            .Key("route_length"s).Value(static_cast<int>(bi.route_length)).Key("stop_count"s).Value(static_cast<int>(bi.stops_number))
+            .Key("route_length"s).Value(static_cast<double>(bi.route_length)).Key("stop_count"s).Value(static_cast<int>(bi.stops_number))
             .Key("unique_stop_count"s).Value(static_cast<int>(bi.unique_stops)).EndDict().Build();
 }
 
@@ -327,6 +335,9 @@ json::Node JsonReader::GenerateStopNode(int id, std::string& name) const {
 
 
 RendererSettings JsonReader::GetRendererSetting() const {
+    if (renderer_settings_.has_value()) {
+        return renderer_settings_.value();
+    }
 
     const auto& root_node = root_.back().GetRoot();
     if (!root_node.IsDict()) {
@@ -431,10 +442,15 @@ RendererSettings JsonReader::GetRendererSetting() const {
         throw json::ParsingError("Error while parsing renderer settings, color palette data.");
     }
 
+    renderer_settings_.emplace(settings);
     return settings;
 }
 
 RoutingSettings JsonReader::GetRoutingSettings() const {
+    if (routing_settings_.has_value()) {
+        return routing_settings_.value();
+    }
+
     const auto& root_node = root_.back().GetRoot();
     if (!root_node.IsDict()) {
         throw json::ParsingError("Error reading JSON data with routing settings.");
@@ -443,7 +459,7 @@ RoutingSettings JsonReader::GetRoutingSettings() const {
     const json::Dict& root_dict = root_node.AsDict();
     auto iter = root_dict.find(ROUTING_SETTINGS);
     if (iter == root_dict.end() || !(iter->second.IsDict()) ) {
-        throw json::ParsingError("Error reading JSON data with routing settings..");
+        return {};
     }
 
     RoutingSettings settings {};
@@ -460,6 +476,7 @@ RoutingSettings JsonReader::GetRoutingSettings() const {
         throw json::ParsingError("Error while parsing routing settings, bus velocity data.");
     }
 
+    routing_settings_.emplace(settings);
     return settings;
 }
 
@@ -510,6 +527,46 @@ json::Node JsonReader::GenerateRouteNode(int id, std::string_view from, std::str
 std::optional<graph::Router<double>::RouteInfo> JsonReader::GenerateRoute(std::string_view from_stop, std::string_view to_stop) const {
     return graph_ptr_->BuildRoute(from_stop, to_stop);
 }
+
+SerializationSettings JsonReader::GetSerializationSettings() const {
+    const auto& root_node = root_.back().GetRoot();
+    if (!root_node.IsDict()){
+        throw json::ParsingError("Error reading JSON data with serialization settings.");
+    }
+
+    const json::Dict& root_dict = root_node.AsDict();
+    auto iter = root_dict.find(SERIALIZE_SETTINGS);
+    if (iter == root_dict.end() || !(iter->second.IsDict()) ) {
+        throw json::ParsingError("Error reading JSON data with serialization settings..");
+    }
+
+    SerializationSettings result;
+    const json::Dict& serialization_settings = iter->second.AsDict();
+    if (const auto& file_name = serialization_settings.find("file"); file_name != serialization_settings.end() && file_name->second.IsString()) {
+        result.file_name = file_name->second.AsString();
+    } else {
+        throw json::ParsingError("Error while parsing serialization settings, file name data is corrupt.");
+    }
+
+    return std::move(result);
+}
+
+
+void JsonReader::SaveTo(tc_serialize::TransportCatalogue &t_cat) const {
+    *t_cat.mutable_render_settings() = std::move(RendererSettingsToSerialize(GetRendererSetting()));
+    *t_cat.mutable_routing_settings() = std::move(RoutingToSerialize(GetRoutingSettings()));
+    graph_ptr_->SaveTo(t_cat);
+}
+
+bool JsonReader::RestoreFrom(tc_serialize::TransportCatalogue &t_cat) {
+    renderer_settings_.emplace(RenderSettingToDomain(t_cat.render_settings()));
+    routing_settings_.emplace(RoutingToDomain(t_cat.routing_settings()));
+
+    graph_ptr_ = std::make_unique<TransportCatalogueRouterGraph>(transport_catalogue_, routing_settings_.value(), t_cat);
+
+    return true;
+}
+
 
 svg::Color ParseColor(const json::Node& node){
     if (node.IsString()) {

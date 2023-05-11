@@ -9,7 +9,7 @@ namespace transport_catalogue{
 
 
 void TransportCatalogue::AddStop(const std::string& name, const geo::Coordinates coords) {
-    const Stop stop {name, coords};
+    const Stop stop {0, name, coords};
 
     AddStop(stop);
 }
@@ -17,10 +17,16 @@ void TransportCatalogue::AddStop(const std::string& name, const geo::Coordinates
 void TransportCatalogue::AddStop(const Stop& stop) {
     if (stops_index_.count(stop.stop_name) > 0) return;
 
-    const Stop* ptr = &stops_.emplace_back(stop);
+    Stop* ptr = &stops_.emplace_back(stop);
 
-    std::string_view stop_name (ptr->stop_name); // string_view must point to permanent string, that will not disappear.
+    if (ptr->id == 0){ // if we created the stop from Raw data in JSON
+        ptr->id = ++stop_id_counter_;
+    } else {
+        stop_id_counter_ = ptr->id;
+    }
+    std::string_view stop_name(ptr->stop_name); // string_view must point to permanent string, that will not disappear.
     stops_index_.emplace(stop_name, ptr);
+    stop_id_name_index_.emplace(ptr->id, ptr);
 }
 
 std::pair<bool, const Stop&> TransportCatalogue::FindStop(const std::string_view name) const {
@@ -46,7 +52,7 @@ bool TransportCatalogue::AddBus(const BusRoute &bus_route) {
     return true;
 }
 
-const BusRoute& TransportCatalogue::FindBus(std::string_view name) {
+const BusRoute& TransportCatalogue::FindBus(std::string_view name) const {
     const auto iter = routes_index_.find(name);
     if (iter == routes_index_.end()) return EMPTY_BUS_ROUTE;
 
@@ -171,19 +177,119 @@ TransportCatalogue::GetStopAndBuses() const {
     return stop_and_buses_;
 }
 
-    size_t TransportCatalogue::GetNumberOfStopsOnAllRoutes() const {
-        size_t result = 0;
+size_t TransportCatalogue::GetNumberOfStopsOnAllRoutes() const {
+    size_t result = 0;
 
-        for (const auto& [bus, route] : routes_index_) {
-            result += route->route_stops.size();
-            if (route->type == RouteType::CIRCLE_ROUTE) {
-                --result;
-            }
+    for (const auto& [bus, route] : routes_index_) {
+        result += route->route_stops.size();
+        if (route->type == RouteType::CIRCLE_ROUTE) {
+            --result;
         }
-
-        return result;
     }
 
+    return result;
+}
 
+void TransportCatalogue::SaveTo(tc_serialize::TransportCatalogue& t_cat) const {
+    // Preparing  Stops
+    tc_serialize::StopsList st_list;
+    for (const auto [_, stop_ptr] : stop_id_name_index_ ) {
+        *st_list.add_all_stops() = std::move(StopToSerialize(*stop_ptr));
+    }
+    *t_cat.mutable_stops() = st_list;
+
+    // Preparing stop distances
+    tc_serialize::StopDistanceIndex stop_distances;
+    for (const auto [stop_ptrs, distance] : stops_distance_index_) {
+        *stop_distances.add_all_stops_distance_index() = std::move(DistanceToSerialize(stop_ptrs.stop->id, stop_ptrs.other->id, distance));
+    }
+    *t_cat.mutable_index() = stop_distances;
+
+    // Preparing bus routes
+    tc_serialize::AllRoutesList routes_list;
+    for (const BusRoute& route : bus_routes_) {
+        tc_serialize::BusRoute br_out;
+        br_out.set_bus_name(route.bus_name);
+        int32_t rt = 0;
+        if (route.type == RouteType::CIRCLE_ROUTE) {
+            rt = 1;
+        } else if (route.type == RouteType::RETURN_ROUTE) {
+            rt = 2;
+        } else {
+            rt = 0;
+        }
+        br_out.set_route_type(rt);
+        for (auto stop_ptr : route.route_stops) {
+            br_out.add_stop_ids(stop_ptr->id);
+        }
+        *routes_list.add_routes_list() = std::move(br_out);
+    }
+    *t_cat.mutable_routes() = routes_list;
+}
+
+
+bool TransportCatalogue::RestoreFrom(tc_serialize::TransportCatalogue& t_cat) {
+    // Restore stops
+    tc_serialize::StopsList st_list = t_cat.stops();
+    for (int i = 0; i < st_list.all_stops_size(); ++i) {
+        AddStop(StopToDomain(st_list.all_stops(i)));
+    }
+
+    // Restores distances between stops
+    tc_serialize::StopDistanceIndex stops_distances = t_cat.index();
+    for (int i = 0; i < stops_distances.all_stops_distance_index_size(); ++i) {
+        const tc_serialize::DistanceBetweenStops& dist = stops_distances.all_stops_distance_index(i);
+        std::string_view from = GetStopNameById(dist.from_id());
+        std::string_view to = GetStopNameById(dist.to_id());
+        SetDistanceBetweenStops(from, to, dist.distance());
+    }
+
+    // Restore bus routes
+    tc_serialize::AllRoutesList all_routes = t_cat.routes();
+    for (int i = 0; i < all_routes.routes_list_size(); ++i) {
+        const tc_serialize::BusRoute& route_in = all_routes.routes_list(i);
+        BusRoute bus_out;
+        bus_out.bus_name = route_in.bus_name();
+        if (route_in.route_type() == 1) {
+            bus_out.type = RouteType::CIRCLE_ROUTE;
+        } else if (route_in.route_type() == 2) {
+            bus_out.type = RouteType::RETURN_ROUTE;
+        } else {
+            bus_out.type = RouteType::NOT_SET;
+        }
+        bus_out.route_stops.reserve(route_in.stop_ids_size());
+        for (int j = 0; j < route_in.stop_ids_size(); ++j) {
+            const std::string_view stop_name = GetStopNameById(route_in.stop_ids(j));
+            const auto [result, stop_const_ref] = FindStop(stop_name);
+            if (!result) {
+                return false;
+            }
+            bus_out.route_stops.push_back(&stop_const_ref);
+        }
+        AddBus(bus_out);
+    }
+
+    return true;
+}
+
+
+
+uint32_t TransportCatalogue::GetStopId(const std::string_view stop_name) const {
+    auto iter = stops_index_.find(stop_name);
+    if (iter == stops_index_.end()) {
+        return 0;
+    }
+
+    return iter->second->id;
+}
+
+const std::string_view TransportCatalogue::GetStopNameById(uint32_t stop_id) const {
+    auto iter = stop_id_name_index_.find(stop_id);
+    if (iter == stop_id_name_index_.end()) {
+        return {};
+    }
+
+    return {iter->second->stop_name};
+}
 
 } // transport_catalogue namespace
