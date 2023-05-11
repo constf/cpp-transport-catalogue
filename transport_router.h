@@ -97,15 +97,15 @@ private:
     double CalculateTimeForDistance(int distance) const;
 
     // Serialization / Deserialization helper methods
-    tc_serialize::StopOnRoutePB StopOnRouteToSerialize(const StopOnRoute& stop, graph::VertexId vertexId) const;
-    StopOnRoute StopOnRouteToDomain(const tc_serialize::StopOnRoutePB& stop);
+    tc_serialize::StopOnRoutePB SerializeStopOnRoute(const StopOnRoute& stop, graph::VertexId vertexId) const;
+    StopOnRoute DeserializeStopOnRoute(const tc_serialize::StopOnRoutePB& stop);
 
-    tc_serialize::TwoStopsLinkPB TwoStopsLinkToSerialize(const TwoStopsLink& link, graph::EdgeId edge) const;
-    TwoStopsLink TwoStopsLinkToDomain(const tc_serialize::TwoStopsLinkPB& link) const;
+    tc_serialize::TwoStopsLinkPB SerializeTwoStopsLink(const TwoStopsLink& link, graph::EdgeId edge) const;
+    TwoStopsLink DeserializeTwoStopsLink(const tc_serialize::TwoStopsLinkPB& link) const;
 
-    tc_serialize::EdgePB EdgeToSerialize(const graph::Edge<double>& edge) const;
-    graph::Edge<double> EdgeToDomain(const tc_serialize::EdgePB& edge) const;
+    tc_serialize::EdgePB SerializeEdge(const graph::Edge<double>& edge) const;
+    graph::Edge<double> DeserializeEdge(const tc_serialize::EdgePB& edge) const;
 
-    tc_serialize::IncListPB IncListToSerialize(const std::vector<size_t>& list) const;
-    std::vector<size_t> IncListToDomain(const tc_serialize::IncListPB& list) const;
+    tc_serialize::IncListPB SerializeIncList(const std::vector<size_t>& list) const;
+    std::vector<size_t> DeserializeIncList(const tc_serialize::IncListPB& list) const;
 };

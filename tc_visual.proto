@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package tc_serialize;
+
+// Render settings
+message Point {
+  double x = 1;
+  double y = 2;
+}
+
+message RGB {
+  uint32 red = 1;
+  uint32 green = 2;
+  uint32 blue = 3;
+}
+
+message RGBA {
+  uint32 red = 1;
+  uint32 green = 2;
+  uint32 blue = 3;
+  double opacity = 4;
+}
+
+message Color{
+  string color_string = 1;
+  RGB color_rgb = 2;
+  RGBA color_rgba = 3;
+}
+
+message RenderSettings {
+  double width = 1;
+  double height = 2;
+  double padding = 3;
+  double line_width = 4;
+  double stop_radius = 5;
+
+  double bus_label_font_size = 6;
+  Point bus_label_offset = 7;
+
+  double stop_label_font_size = 8;
+  Point stop_label_offset = 9;
+
+  Color underlayer_color = 10;
+  double underlayer_width = 11;
+
+  repeated Color color_palette = 12;
+}

@@ -180,11 +180,11 @@ bool TransportCatalogueRouterGraph::SaveTo(tc_serialize::TransportCatalogue& tc_
     // Saving fields of TransportCatalogueRouterGraph
     // stop_to_vertex_ & vertex_to_stop_ saving - they have same pair
     for (const auto& [stop, vertex] : stop_to_vertex_) {
-        *out.add_tc_router_stops_() = std::move(StopOnRouteToSerialize(stop, vertex));
+        *out.add_tc_router_stops_() = std::move(SerializeStopOnRoute(stop, vertex));
     }
     // stoplink_to_edge_ & edge_to_stoplink_ saving - they have same pair
     for (const auto& [stoplink, edge] : stoplink_to_edge_) {
-        *out.add_tc_router_links() = std::move(TwoStopsLinkToSerialize(stoplink, edge));
+        *out.add_tc_router_links() = std::move(SerializeTwoStopsLink(stoplink, edge));
     }
     out.set_vertex_id_count(vertex_id_count_);
     out.set_edge_count(edge_count_);
@@ -193,17 +193,17 @@ bool TransportCatalogueRouterGraph::SaveTo(tc_serialize::TransportCatalogue& tc_
     // edges_
     tc_serialize::EdgeVectorPB edges_list;
     for (const auto& edge : edges_) {
-        *edges_list.add_edges() = std::move(EdgeToSerialize(edge));
+        *edges_list.add_edges() = std::move(SerializeEdge(edge));
     }
     *out.mutable_graph_edges() = std::move(edges_list);
     // incidence_lists_
     tc_serialize::IncidenceListPB big_list;
     for (const auto& list : incidence_lists_) {
-        *big_list.add_lists() = std::move(IncListToSerialize(list));
+        *big_list.add_lists() = std::move(SerializeIncList(list));
     }
     *out.mutable_graph_incidence_list() = std::move(big_list);
 
-    *tc_out.mutable_tc_graph_router() = std::move(out);
+    *(tc_out.mutable_router_settings()->mutable_tc_graph_router()) = std::move(out);
 
     router_ptr_->SaveTo(tc_out);
 
@@ -213,33 +213,34 @@ bool TransportCatalogueRouterGraph::SaveTo(tc_serialize::TransportCatalogue& tc_
 bool TransportCatalogueRouterGraph::RestoreFrom(const tc_serialize::TransportCatalogue &tc_in) {
     // Restoring fields of TransportCatalogueRouterGraph
     // stop_to_vertex_ & vertex_to_stop_ saving - they have same pair
-    for (int i = 0; i < tc_in.tc_graph_router().tc_router_stops__size(); ++i) {
-        StopOnRoute stop = StopOnRouteToDomain(tc_in.tc_graph_router().tc_router_stops_(i));
-        graph::VertexId vertex_id = tc_in.tc_graph_router().tc_router_stops_(i).vertex_id();
+    const auto& data_from = tc_in.router_settings().tc_graph_router();
+    for (int i = 0; i < data_from.tc_router_stops__size(); ++i) {
+        StopOnRoute stop = DeserializeStopOnRoute(data_from.tc_router_stops_(i));
+        graph::VertexId vertex_id = data_from.tc_router_stops_(i).vertex_id();
         stop_to_vertex_[stop] = vertex_id;
         vertex_to_stop_[vertex_id] = stop;
     }
     // stoplink_to_edge_ & edge_to_stoplink_ saving - they have same pair
-    for (int i = 0; i < tc_in.tc_graph_router().tc_router_links_size(); ++i) {
-        TwoStopsLink link = TwoStopsLinkToDomain(tc_in.tc_graph_router().tc_router_links(i));
-        graph::EdgeId edge_id = tc_in.tc_graph_router().tc_router_links(i).edge_id();
+    for (int i = 0; i < data_from.tc_router_links_size(); ++i) {
+        TwoStopsLink link = DeserializeTwoStopsLink(data_from.tc_router_links(i));
+        graph::EdgeId edge_id = data_from.tc_router_links(i).edge_id();
         stoplink_to_edge_[link] = edge_id;
         edge_to_stoplink_[edge_id] = link;
     }
-    vertex_id_count_ = tc_in.tc_graph_router().vertex_id_count();
-    edge_count_ = tc_in.tc_graph_router().edge_count();
+    vertex_id_count_ = data_from.vertex_id_count();
+    edge_count_ = data_from.edge_count();
 
     // Restoring fields of graph::DirectedWeightedGraph
     // edges_
-    edges_.reserve(tc_in.tc_graph_router().graph_edges().edges_size());
-    for (int i = 0; i < tc_in.tc_graph_router().graph_edges().edges_size(); ++i) {
-        graph::Edge<double> edge = EdgeToDomain(tc_in.tc_graph_router().graph_edges().edges(i));
+    edges_.reserve(data_from.graph_edges().edges_size());
+    for (int i = 0; i < data_from.graph_edges().edges_size(); ++i) {
+        graph::Edge<double> edge = DeserializeEdge(data_from.graph_edges().edges(i));
         edges_.emplace_back(edge);
     }
     // incidence_lists_
-    incidence_lists_.reserve(tc_in.tc_graph_router().graph_incidence_list().lists_size());
-    for (int i = 0; i < tc_in.tc_graph_router().graph_incidence_list().lists_size(); ++i) {
-        auto list = std::move(IncListToDomain(tc_in.tc_graph_router().graph_incidence_list().lists(i)));
+    incidence_lists_.reserve(data_from.graph_incidence_list().lists_size());
+    for (int i = 0; i < data_from.graph_incidence_list().lists_size(); ++i) {
+        auto list = std::move(DeserializeIncList(data_from.graph_incidence_list().lists(i)));
         incidence_lists_.emplace_back(std::move(list));
     }
 
@@ -249,7 +250,7 @@ bool TransportCatalogueRouterGraph::RestoreFrom(const tc_serialize::TransportCat
 
 
 tc_serialize::StopOnRoutePB
-TransportCatalogueRouterGraph::StopOnRouteToSerialize(const TransportCatalogueRouterGraph::StopOnRoute &stop, graph::VertexId vertexId) const {
+TransportCatalogueRouterGraph::SerializeStopOnRoute(const StopOnRoute &stop, graph::VertexId vertexId) const {
     tc_serialize::StopOnRoutePB result;
 
     result.set_bus_name(std::string {stop.bus_name});
@@ -262,7 +263,7 @@ TransportCatalogueRouterGraph::StopOnRouteToSerialize(const TransportCatalogueRo
 }
 
 TransportCatalogueRouterGraph::StopOnRoute
-TransportCatalogueRouterGraph::StopOnRouteToDomain(const tc_serialize::StopOnRoutePB &stop) {
+TransportCatalogueRouterGraph::DeserializeStopOnRoute(const tc_serialize::StopOnRoutePB &stop) {
     TransportCatalogueRouterGraph::StopOnRoute result;
 
     auto st_name = tc_.GetStopNameById(stop.stop_id());
@@ -276,7 +277,7 @@ TransportCatalogueRouterGraph::StopOnRouteToDomain(const tc_serialize::StopOnRou
 }
 
 tc_serialize::TwoStopsLinkPB
-TransportCatalogueRouterGraph::TwoStopsLinkToSerialize(const TwoStopsLink& link, graph::EdgeId edge) const {
+TransportCatalogueRouterGraph::SerializeTwoStopsLink(const TwoStopsLink& link, graph::EdgeId edge) const {
     tc_serialize::TwoStopsLinkPB result;
 
     result.set_bus_name(std::string {link.bus_name});
@@ -288,7 +289,7 @@ TransportCatalogueRouterGraph::TwoStopsLinkToSerialize(const TwoStopsLink& link,
     return std::move(result);
 }
 
-TwoStopsLink TransportCatalogueRouterGraph::TwoStopsLinkToDomain(const tc_serialize::TwoStopsLinkPB &link) const {
+TwoStopsLink TransportCatalogueRouterGraph::DeserializeTwoStopsLink(const tc_serialize::TwoStopsLinkPB &link) const {
     TwoStopsLink result;
 
     const auto& b_name = link.bus_name();
@@ -302,7 +303,7 @@ TwoStopsLink TransportCatalogueRouterGraph::TwoStopsLinkToDomain(const tc_serial
     return result;
 }
 
-tc_serialize::EdgePB TransportCatalogueRouterGraph::EdgeToSerialize(const graph::Edge<double> &edge) const {
+tc_serialize::EdgePB TransportCatalogueRouterGraph::SerializeEdge(const graph::Edge<double> &edge) const {
     tc_serialize::EdgePB result;
 
     result.set_from(edge.from);
@@ -312,7 +313,7 @@ tc_serialize::EdgePB TransportCatalogueRouterGraph::EdgeToSerialize(const graph:
     return result;
 }
 
-graph::Edge<double> TransportCatalogueRouterGraph::EdgeToDomain(const tc_serialize::EdgePB &edge) const {
+graph::Edge<double> TransportCatalogueRouterGraph::DeserializeEdge(const tc_serialize::EdgePB &edge) const {
     graph::Edge<double> result{};
 
     result.from = edge.from();
@@ -322,7 +323,7 @@ graph::Edge<double> TransportCatalogueRouterGraph::EdgeToDomain(const tc_seriali
     return result;
 }
 
-tc_serialize::IncListPB TransportCatalogueRouterGraph::IncListToSerialize(const std::vector<size_t>& list) const {
+tc_serialize::IncListPB TransportCatalogueRouterGraph::SerializeIncList(const std::vector<size_t>& list) const {
     tc_serialize::IncListPB result;
 
     for (const size_t edge : list) {
@@ -332,7 +333,7 @@ tc_serialize::IncListPB TransportCatalogueRouterGraph::IncListToSerialize(const 
     return std::move(result);
 }
 
-std::vector<size_t> TransportCatalogueRouterGraph::IncListToDomain(const tc_serialize::IncListPB& list) const {
+std::vector<size_t> TransportCatalogueRouterGraph::DeserializeIncList(const tc_serialize::IncListPB& list) const {
     std::vector<size_t> result(list.list_size());
 
     for (int i = 0; i < list.list_size(); ++i) {

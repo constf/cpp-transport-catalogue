@@ -7,7 +7,7 @@ set(CMAKE_PREFIX_PATH c:/dev/pro3)
 find_package(Protobuf REQUIRED)
 find_package(Threads REQUIRED)
 
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS transport_catalogue.proto)
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS transport_catalogue.proto tc_base.proto tc_visual.proto tc_routing.proto)
 
 set(TC_FILES main.cpp geo.h transport_catalogue.cpp transport_catalogue.h domain.h domain.cpp geo.cpp json.cpp json.h json_reader.cpp json_reader.h request_handler.cpp request_handler.h svg.cpp svg.h map_renderer.cpp map_renderer.h json_builder.cpp json_builder.h graph.h ranges.h router.h transport_router.cpp transport_router.h serialization.cpp serialization.h)
 

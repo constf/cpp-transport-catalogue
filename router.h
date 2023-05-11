@@ -41,8 +41,8 @@ namespace graph {
         using RoutesInternalData = std::vector<std::vector<std::optional<RouteInternalData>>>;
 
     private:
-        tc_serialize::RouteIntDataPB RouteIntDataToSerialize(const std::optional<Router<Weight>::RouteInternalData> &data) const;
-        std::optional<RouteInternalData> RouteIntDataToDomain(const tc_serialize::RouteIntDataPB& data) const;
+        tc_serialize::RouteIntDataPB SerializeRouteIntData(const std::optional<Router<Weight>::RouteInternalData> &data) const;
+        std::optional<RouteInternalData> DeserializeRouteIntData(const tc_serialize::RouteIntDataPB& data) const;
 
         void InitializeRoutesInternalData(const Graph& graph) {
             const size_t vertex_count = graph.GetVertexCount();
@@ -90,7 +90,7 @@ namespace graph {
 
     template<typename Weight>
     std::optional<typename Router<Weight>::RouteInternalData>
-    Router<Weight>::RouteIntDataToDomain(const tc_serialize::RouteIntDataPB &data) const {
+    Router<Weight>::DeserializeRouteIntData(const tc_serialize::RouteIntDataPB &data) const {
         if (data.data_empty()) {
             return {std::nullopt};
         }
@@ -107,7 +107,7 @@ namespace graph {
 
     template<typename Weight>
     tc_serialize::RouteIntDataPB
-    Router<Weight>::RouteIntDataToSerialize(const std::optional<Router<Weight>::RouteInternalData> &data) const {
+    Router<Weight>::SerializeRouteIntData(const std::optional<Router<Weight>::RouteInternalData> &data) const {
         tc_serialize::RouteIntDataPB result;
         if (!data) {
             result.set_data_empty(true);
@@ -130,14 +130,16 @@ namespace graph {
 
     template<typename Weight>
     bool Router<Weight>::RestoreFrom(const tc_serialize::TransportCatalogue &tc_in) {
-        routes_internal_data_.reserve(tc_in.router_routes_int_data().routes_list_size());
+        const auto& data_from = tc_in.router_settings().router_routes_int_data();
 
-        for (int i = 0; i < tc_in.router_routes_int_data().routes_list_size(); ++i) {
-            const tc_serialize::VertexCountListPB& small_list = tc_in.router_routes_int_data().routes_list(i);
+        routes_internal_data_.reserve(data_from.routes_list_size());
+
+        for (int i = 0; i < data_from.routes_list_size(); ++i) {
+            const tc_serialize::VertexCountListPB& small_list = data_from.routes_list(i);
             std::vector<std::optional<RouteInternalData>> out_list(small_list.vertex_list_size());
             for (int j = 0; j < small_list.vertex_list_size(); ++j) {
                 const tc_serialize::RouteIntDataPB& data = small_list.vertex_list(j);
-                out_list[j] = RouteIntDataToDomain(data);
+                out_list[j] = DeserializeRouteIntData(data);
             }
             routes_internal_data_.emplace_back(std::move(out_list));
         }
@@ -152,12 +154,12 @@ namespace graph {
         for (const auto& vertex_list : routes_internal_data_) {
             tc_serialize::VertexCountListPB int_data_list;
             for (const auto& data : vertex_list) {
-                *int_data_list.add_vertex_list() = RouteIntDataToSerialize(data);
+                *int_data_list.add_vertex_list() = SerializeRouteIntData(data);
             }
             *big_list.add_routes_list() = std::move(int_data_list);
         }
 
-        *tc_out.mutable_router_routes_int_data() = std::move(big_list);
+        *(tc_out.mutable_router_settings()->mutable_router_routes_int_data()) = std::move(big_list);
 
         return true;
     }

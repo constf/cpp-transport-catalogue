@@ -194,16 +194,19 @@ void TransportCatalogue::SaveTo(tc_serialize::TransportCatalogue& t_cat) const {
     // Preparing  Stops
     tc_serialize::StopsList st_list;
     for (const auto [_, stop_ptr] : stop_id_name_index_ ) {
-        *st_list.add_all_stops() = std::move(StopToSerialize(*stop_ptr));
+        *st_list.add_all_stops() = std::move(SerializeStop(*stop_ptr));
     }
-    *t_cat.mutable_stops() = st_list;
+    //*t_cat.mutable_stops() = st_list;
+    *(t_cat.mutable_base_settings()->mutable_stops_list()) = std::move(st_list);
 
     // Preparing stop distances
     tc_serialize::StopDistanceIndex stop_distances;
     for (const auto [stop_ptrs, distance] : stops_distance_index_) {
-        *stop_distances.add_all_stops_distance_index() = std::move(DistanceToSerialize(stop_ptrs.stop->id, stop_ptrs.other->id, distance));
+        *stop_distances.add_all_stops_distance_index() = std::move(
+                SerializeDistance(stop_ptrs.stop->id, stop_ptrs.other->id, distance));
     }
-    *t_cat.mutable_index() = stop_distances;
+    //*t_cat.mutable_index() = stop_distances;
+    *(t_cat.mutable_base_settings()->mutable_stop_dist_index()) = std::move(stop_distances);
 
     // Preparing bus routes
     tc_serialize::AllRoutesList routes_list;
@@ -224,19 +227,20 @@ void TransportCatalogue::SaveTo(tc_serialize::TransportCatalogue& t_cat) const {
         }
         *routes_list.add_routes_list() = std::move(br_out);
     }
-    *t_cat.mutable_routes() = routes_list;
+    //*t_cat.mutable_routes() = routes_list;
+    *(t_cat.mutable_base_settings()->mutable_all_routes_list()) = std::move(routes_list);
 }
 
 
 bool TransportCatalogue::RestoreFrom(tc_serialize::TransportCatalogue& t_cat) {
     // Restore stops
-    tc_serialize::StopsList st_list = t_cat.stops();
+    tc_serialize::StopsList st_list = t_cat.base_settings().stops_list();
     for (int i = 0; i < st_list.all_stops_size(); ++i) {
-        AddStop(StopToDomain(st_list.all_stops(i)));
+        AddStop(DeserializeStop(st_list.all_stops(i)));
     }
 
     // Restores distances between stops
-    tc_serialize::StopDistanceIndex stops_distances = t_cat.index();
+    tc_serialize::StopDistanceIndex stops_distances = t_cat.base_settings().stop_dist_index();
     for (int i = 0; i < stops_distances.all_stops_distance_index_size(); ++i) {
         const tc_serialize::DistanceBetweenStops& dist = stops_distances.all_stops_distance_index(i);
         std::string_view from = GetStopNameById(dist.from_id());
@@ -245,7 +249,7 @@ bool TransportCatalogue::RestoreFrom(tc_serialize::TransportCatalogue& t_cat) {
     }
 
     // Restore bus routes
-    tc_serialize::AllRoutesList all_routes = t_cat.routes();
+    tc_serialize::AllRoutesList all_routes = t_cat.base_settings().all_routes_list();
     for (int i = 0; i < all_routes.routes_list_size(); ++i) {
         const tc_serialize::BusRoute& route_in = all_routes.routes_list(i);
         BusRoute bus_out;

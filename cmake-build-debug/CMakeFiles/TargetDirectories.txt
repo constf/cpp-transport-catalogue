@@ -1,3 +1,0 @@
-C:/Users/Konstantin/CPP projects/cpp-transport-catalogue/cmake-build-debug/CMakeFiles/transport_catalogue.dir
-C:/Users/Konstantin/CPP projects/cpp-transport-catalogue/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/Users/Konstantin/CPP projects/cpp-transport-catalogue/cmake-build-debug/CMakeFiles/rebuild_cache.dir

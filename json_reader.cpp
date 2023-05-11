@@ -553,14 +553,14 @@ SerializationSettings JsonReader::GetSerializationSettings() const {
 
 
 void JsonReader::SaveTo(tc_serialize::TransportCatalogue &t_cat) const {
-    *t_cat.mutable_render_settings() = std::move(RendererSettingsToSerialize(GetRendererSetting()));
-    *t_cat.mutable_routing_settings() = std::move(RoutingToSerialize(GetRoutingSettings()));
+    *t_cat.mutable_render_settings() = std::move(SerializeRendererSettings(GetRendererSetting()));
+    *(t_cat.mutable_router_settings()->mutable_routing_settings()) = std::move(SerializeRouting(GetRoutingSettings()));
     graph_ptr_->SaveTo(t_cat);
 }
 
 bool JsonReader::RestoreFrom(tc_serialize::TransportCatalogue &t_cat) {
-    renderer_settings_.emplace(RenderSettingToDomain(t_cat.render_settings()));
-    routing_settings_.emplace(RoutingToDomain(t_cat.routing_settings()));
+    renderer_settings_.emplace(DeserializeRenderSetting(t_cat.render_settings()));
+    routing_settings_.emplace(DeserializeRouting(t_cat.router_settings().routing_settings()));
 
     graph_ptr_ = std::make_unique<TransportCatalogueRouterGraph>(transport_catalogue_, routing_settings_.value(), t_cat);
 
